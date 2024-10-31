@@ -1,0 +1,285 @@
+---
+title: "(Pre-) Data Wrangling"
+format: 
+    html:
+        toc: true
+        toc-title: Contents
+        toc-location: left
+lang: "eng"
+editor_options: 
+  chunk_output_type: console
+---
+
+
+# 0. Version and Packages 
+
+```{r}
+# Get R version
+r_version <- R.version.string
+
+# Get RStudio version (convert to character)
+rstudio_version <- if (Sys.getenv("RSTUDIO") == "1") {
+  as.character(RStudio.Version()$version)
+} else {
+  "Not running in RStudio"
+}
+
+# Display the version information to the console
+cat("R version:", r_version, "\n")
+cat("RStudio version:", rstudio_version, "\n")
+```
+
+```{r}
+library(readxl)
+library(lubridate)
+library(skimr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(DescTools)
+library(lpSolve)
+library(irr)
+library(viridisLite)
+library(viridis)
+library(devtools)
+library(hrbrthemes)
+library(ggalt)
+library(heuristicsmineR)
+library(scales)
+library(bupaR)
+library(gghalves)
+library(openxlsx)
+library(distributional)
+library(ggdist)
+library(stringr)
+library(cluster)
+library(circlize)
+library(sjmisc)
+library(partitionComparison)
+library(brms)
+library(tidyverse)
+library(modelsummary)
+library(writexl)
+```
+
+
+# 1. Demographics PDW
+
+```{r}
+demographics_PDW <- read_xlsx("Data/pre_Demographics.xlsx")
+
+# Exclude participants, rename and reorder.
+demographics_PDW <- demographics_PDW |> 
+  filter(pseudonym %in% c("Abfabe_II", "Ahdaxa_II", "Amwocv_II", "Apdewi_II", "Apjahg_II", "Assiro_II", "Atsaza_II", "Ayvidf_II", "Bakyij_II", "Bivrak_II", "Bunkui_II", "Cewtay_II", "Cifhes_II", "Citmea_II", "Dekpit_II", "Dicram_II", "Eddeta_II", "Eggemy_II", "Eggusa_II", "Emmaxi_II", "Enfalo_II", "Erjihl_II", "Exwulu_II", "Fabpud_II", "Fanrag_II", "Faslar_II", "Fixget_II", "Fopdos_II", "Gisfak_II", "Gitbeh_II", "Lijpuk_II", "Luzgas_II", "Mafvod_II", "Majwem_II", "Mamlet_II", "Mihlel_II", "Nardon_II", "Nidjiu_II", "Odseni_II", "Ojgaxa_II", "Oklopa_II", "Orpepa_II", "Passee_II", "Pecxov_II", "Pevaal_II", "Rargid_II", "Zittif_II")) |> 
+  rename("PID" = "pseudonym") |>
+  select(PID, everything()) |> 
+  mutate(PID = str_replace(PID, "_II$", ""))
+        
+# Safe the data set 
+write_xlsx(demographics_PDW, "Data/TPOD_Demographics.xlsx")
+```
+
+
+# 2. Statistical Entities PDW  
+```{r}
+# Import statistical entities (SE) data set 
+SE_PDW <- read_excel("Data/pre_Consensus_Statistical_Entities.xlsx")
+
+
+# Streamline data set and round start and end times 
+SE_PDW <- SE_PDW |>
+  rename("PID" = "Dokumentname") |>
+  select(PID, Code, Anfang, Ende) |>
+  mutate(Code = ifelse(as_factor(SE_PDW$Code) == "ST_US\\ST_WB", "ST_WB", Code), 
+         # You need to type \\, because otherwise the backslash isn't registered. 
+         Code = ifelse(as_factor(SE_PDW$Code) == "ST_US\\ST_AM", "ST_AM", Code)) |> 
+  filter(Code %in% c("AE", "SU", "AR", "BM", "MD", "SC", "ST_US", "ST_AM", "ST_WB")) |> 
+  mutate(PID = str_replace(PID, "_II$", ""),
+         PID = str_replace(PID, "_D$", "")) |> 
+  select(PID, Code, Anfang, Ende) |> 
+  mutate(Anfang_2 = str_sub(Anfang, -1), # Truncate the last millisecond
+         Ende_2 = str_sub(Ende, -1)) |>  # Truncate the last millisecond
+  mutate(start_1 = ymd_hms(ymd("2000-01-01") + hms(Anfang)), 
+         end_1 = ymd_hms(ymd("2000-01-01") + hms(Ende)), 
+         turnID = 1:n(),
+         code = Code) |> 
+  mutate(start = case_when(Anfang_2 > 4 ~ (ymd_hms(start_1) + seconds(1)), TRUE~ ymd_hms(start_1))) |>  # rounding start
+  mutate(end = case_when(Ende_2 > 4 ~ (ymd_hms(end_1) + seconds(1)), TRUE ~ ymd_hms(end_1))) |>  # rounding end
+  select(PID, code, start, end) |> # TurnID excluded 
+  mutate(across(everything(), ~ replace(., is.na(.), ymd_hms("2000-01-01 00:00:00"))))
+  # Even with an if_else the error message still remains!  
+```
+
+
+```{r}
+# Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
+
+# 1. Extract end durations as objects (in seconds)
+
+# "Passee" end duration (00:06:31) as seconds 
+passee_ed <- SE_PDW %>%
+  filter(PID == "Passee" & code == "AE") %>%
+  pull(end) %>%
+  difftime(ymd_hms("2000-01-01 00:00:00"), units = "secs") %>%
+  as.numeric() # important!
+
+# "Passee2" end duration (00:06:32) as seconds
+passee2_ed <- SE_PDW |>  
+  filter(PID == "Passee2" & code == "AE") |> 
+  pull(end) |> 
+  difftime(ymd_hms("2000-01-01 00:00:00"), units = "secs") %>%
+  as.numeric()
+
+
+# 2. Extract and alter "Passee2" 
+SE_Passee2 <- SE_PDW |> 
+  filter(PID == "Passee2") |> # Leave only rows with "Passee2"
+  filter(code != "AE") # Remove  "AE" from "Passee2"
+
+
+# 3. Add the durations 
+
+# Add "passee_ed" to all "Passee2" durations (so to keep consistency) 
+SE_Passee2 <- SE_Passee2 |> 
+  mutate(start = start + passee_ed, 
+         end = end + passee_ed) # With this it keeps the ydm! 
+         
+# Add "passee2_ed" to the"Passee" end time 
+SE_PDW <- SE_PDW |> 
+  mutate(end = if_else(PID == "Passee" & code == "AE", end + passee2_ed, end))
+  
+# 4. Combine both "Passee_Event" and "Passee2_extr"
+SE_Completed_PDW <- SE_PDW %>%
+  filter(PID != "Passee2") %>%  # Remove all instances of "Passee2" from the original data set
+  bind_rows(SE_Passee2) %>% # Combine the data sets 
+  mutate(PID = if_else(PID == "Passee2", "Passee", PID)) %>% # Rename 
+  arrange(PID) # Rearrange 
+```
+
+```{r}
+# Rename "AE" and the statistical entities
+SE_Completed_PDW <- SE_Completed_PDW |> 
+  mutate(code = recode(code,
+                       "AE" = "TA_D",
+                       "AR" = "OL",
+                       "BM" = "BM",
+                       "SC" = "SK",
+                       "MD" = "MD",
+                       "ST_US" = "DI_US",
+                       "ST_AM" = "DI_DM",
+                       "ST_WB" = "DI_RA"))
+
+# Safe the data set 
+write_xlsx(SE_Completed_PDW, "Data/TPOD_Consensus_Statistical_Entities.xlsx")
+```
+
+# 3. Test score PDW 
+
+```{r}
+Test_score_PDW <- read.csv("Data/pre_Test_Score_Graph_Literacy.csv")
+
+Test_score_PDW <- Test_score_PDW |> 
+  rename("PID" = "pseudonym",
+         "Test_Score" = "graph_literacy")
+
+# Safe the data set as excel
+write_xlsx(Test_score_PDW, "Data/TPOD_Test_Score_Graph_Literacy.xlsx")
+```
+
+
+# 4. Graph Literacy Levels PDW
+
+```{r}
+# Import statistical entities (SE) data set 
+GL_PDW <- read_excel("Data/pre_Consensus_Graph_Literacy_Levels.xlsx")
+
+
+# Streamline data set and round start and end times 
+GL_PDW <- GL_PDW |>
+  rename("PID" = "Dokumentname") |>
+  select(PID, Code, Anfang, Ende) |>
+  filter(Code %in% c("AE", "SU", "RN_01", "RN_02", "RN_03")) |> 
+  mutate(PID = str_replace(PID, "_II$", ""),
+         PID = str_replace(PID, "_D$", "")) |> 
+  mutate(Anfang_2 = str_sub(Anfang, -1), # Truncate the last millisecond
+         Ende_2 = str_sub(Ende, -1)) |>  # Truncate the last millisecond
+  mutate(start_1 = ymd_hms(ymd("2000-01-01") + hms(Anfang)), 
+         end_1 = ymd_hms(ymd("2000-01-01") + hms(Ende)), 
+         turnID = 1:n(),
+         code = Code) |> 
+  mutate(start = case_when(Anfang_2 > 4 ~ (ymd_hms(start_1) + seconds(1)), TRUE~ ymd_hms(start_1))) |>  # rounding start
+  mutate(end = case_when(Ende_2 > 4 ~ (ymd_hms(end_1) + seconds(1)), TRUE ~ ymd_hms(end_1))) |>  # rounding end
+  select(PID, code, start, end) |> # TurnID excluded 
+  mutate(across(everything(), ~ replace(., is.na(.), ymd_hms("2000-01-01 00:00:00"))))
+  # Even with an if_else the error message still remains!  
+```
+
+```{r}
+# Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
+
+# 1. Extract end durations as objects (in seconds)
+
+# "Passee" end duration (00:06:31) as seconds 
+passee_ed <- GL_PDW %>%
+  filter(PID == "Passee" & code == "AE") %>%
+  pull(end) %>%
+  difftime(ymd_hms("2000-01-01 00:00:00"), units = "secs") %>%
+  as.numeric() # important!
+
+# "Passee2" end duration (00:06:32) as seconds
+passee2_ed <- GL_PDW |>  
+  filter(PID == "Passee2" & code == "AE") |> 
+  pull(end) |> 
+  difftime(ymd_hms("2000-01-01 00:00:00"), units = "secs") %>%
+  as.numeric()
+
+
+# 2. Extract and alter "Passee2" 
+GL_Passee2 <- GL_PDW |> 
+  filter(PID == "Passee2") |> # Leave only rows with "Passee2"
+  filter(code != "AE") # Remove  "AE" from "Passee2"
+
+
+# 3. Add the durations 
+
+# Add "passee_ed" to all "Passee2" durations (so to keep consistency) 
+GL_Passee2 <- GL_Passee2 |> 
+  mutate(start = start + passee_ed, 
+         end = end + passee_ed) # With this it keeps the ydm! 
+         
+# Add "passee2_ed" to the"Passee" end time 
+GL_PDW <- GL_PDW |> 
+  mutate(end = if_else(PID == "Passee" & code == "AE", end + passee2_ed, end))
+  
+# 4. Combine both "Passee_Event" and "Passee2_extr"
+GL_Completed_PDW <- GL_PDW %>%
+  filter(PID != "Passee2") %>%  # Remove all instances of "Passee2" from the original data set
+  bind_rows(GL_Passee2) %>% # Combine the data sets 
+  mutate(PID = if_else(PID == "Passee2", "Passee", PID)) %>% # Rename 
+  arrange(PID) # Rearrange 
+```
+
+```{r}
+# Rename "AE" and the statistical entities
+GL_Completed_PDW <- GL_Completed_PDW |> 
+  mutate(code = recode(code,
+                       "AE" = "TA_D",
+                       "SU" = "INT",
+                       "RN_01" = "Lvl_01",
+                       "RN_02" = "Lvl_02",
+                       "RN_03" = "Lvl_03"))
+
+# Safe the data set 
+write_xlsx(GL_Completed_PDW, "Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
+```
+
+# 5. Saving the Plots 
+
+```{r}
+# Saving
+ggsave("Plots/Sequence_Plot 1 (1.4).jpg",  
+width = 10, # 30 too high, between 10 and 20
+height = 16, # 40 too high, between 10 and 20
+dpi = 700)
+```
+
