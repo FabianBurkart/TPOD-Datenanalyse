@@ -60,23 +60,24 @@ library(brms)
 library(tidyverse)
 library(modelsummary)
 library(writexl)
+library(gt)
 ```
 
 
 # 1. Demographics PDW
 
 ```{r}
-demographics_PDW <- read_xlsx("Data/pre_Demographics.xlsx")
+Demographics_PDW <- read_xlsx("Data/pre_Demographics.xlsx")
 
 # Exclude participants, rename and reorder.
-demographics_PDW <- demographics_PDW |> 
+Demographics_PDW <- Demographics_PDW |> 
   filter(pseudonym %in% c("Abfabe_II", "Ahdaxa_II", "Amwocv_II", "Apdewi_II", "Apjahg_II", "Assiro_II", "Atsaza_II", "Ayvidf_II", "Bakyij_II", "Bivrak_II", "Bunkui_II", "Cewtay_II", "Cifhes_II", "Citmea_II", "Dekpit_II", "Dicram_II", "Eddeta_II", "Eggemy_II", "Eggusa_II", "Emmaxi_II", "Enfalo_II", "Erjihl_II", "Exwulu_II", "Fabpud_II", "Fanrag_II", "Faslar_II", "Fixget_II", "Fopdos_II", "Gisfak_II", "Gitbeh_II", "Lijpuk_II", "Luzgas_II", "Mafvod_II", "Majwem_II", "Mamlet_II", "Mihlel_II", "Nardon_II", "Nidjiu_II", "Odseni_II", "Ojgaxa_II", "Oklopa_II", "Orpepa_II", "Passee_II", "Pecxov_II", "Pevaal_II", "Rargid_II", "Zittif_II")) |> 
   rename("PID" = "pseudonym") |>
   select(PID, everything()) |> 
   mutate(PID = str_replace(PID, "_II$", ""))
         
 # Safe the data set 
-write_xlsx(demographics_PDW, "Data/TPOD_Demographics.xlsx")
+write_xlsx(Demographics_PDW, "Data/TPOD_Demographics.xlsx")
 ```
 
 
@@ -84,8 +85,10 @@ write_xlsx(demographics_PDW, "Data/TPOD_Demographics.xlsx")
 ```{r}
 # Import statistical entities (SE) data set 
 SE_PDW <- read_excel("Data/pre_Consensus_Statistical_Entities.xlsx")
+```
 
-
+## 2.1 Change time format and Rounding
+```{r}
 # Streamline data set and round start and end times 
 SE_PDW <- SE_PDW |>
   rename("PID" = "Dokumentname") |>
@@ -110,7 +113,7 @@ SE_PDW <- SE_PDW |>
   # Even with an if_else the error message still remains!  
 ```
 
-
+## 2.2 Solve Passee Problem 
 ```{r}
 # Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
 
@@ -156,6 +159,7 @@ SE_Completed_PDW <- SE_PDW %>%
   arrange(PID) # Rearrange 
 ```
 
+## 2.3 Rename Variables 
 ```{r}
 # Rename "AE" and the statistical entities
 SE_Completed_PDW <- SE_Completed_PDW |> 
@@ -173,14 +177,15 @@ SE_Completed_PDW <- SE_Completed_PDW |>
 write_xlsx(SE_Completed_PDW, "Data/TPOD_Consensus_Statistical_Entities.xlsx")
 ```
 
-# 3. Test score PDW 
 
+# 3. Test score PDW 
 ```{r}
 Test_score_PDW <- read.csv("Data/pre_Test_Score_Graph_Literacy.csv")
 
 Test_score_PDW <- Test_score_PDW |> 
   rename("PID" = "pseudonym",
-         "Test_Score" = "graph_literacy")
+         "Test_Score" = "graph_literacy") |> 
+  filter(PID %in% c("Abfabe", "Ahdaxa", "Amwocv", "Apdewi", "Apjahg", "Assiro", "Atsaza", "Ayvidf", "Bakyij", "Bivrak", "Bunkui", "Cewtay", "Cifhes", "Citmea", "Dekpit", "Dicram", "Eddeta", "Eggemy", "Eggusa", "Emmaxi", "Enfalo", "Erjihl", "Exwulu", "Fabpud", "Fanrag", "Faslar", "Fixget", "Fopdos", "Gisfak", "Gitbeh", "Lijpuk", "Luzgas", "Mafvod", "Majwem", "Mamlet", "Mihlel", "Nardon", "Nidjiu", "Odseni", "Ojgaxa", "Oklopa", "Orpepa", "Passee", "Pecxov", "Pevaal", "Rargid", "Zittif")) 
 
 # Safe the data set as excel
 write_xlsx(Test_score_PDW, "Data/TPOD_Test_Score_Graph_Literacy.xlsx")
@@ -188,12 +193,14 @@ write_xlsx(Test_score_PDW, "Data/TPOD_Test_Score_Graph_Literacy.xlsx")
 
 
 # 4. Graph Literacy Levels PDW
-
+ 
 ```{r}
 # Import statistical entities (SE) data set 
 GL_PDW <- read_excel("Data/pre_Consensus_Graph_Literacy_Levels.xlsx")
+```
 
-
+## 4.1 Change time format and Rounding
+```{r}
 # Streamline data set and round start and end times 
 GL_PDW <- GL_PDW |>
   rename("PID" = "Dokumentname") |>
@@ -214,6 +221,7 @@ GL_PDW <- GL_PDW |>
   # Even with an if_else the error message still remains!  
 ```
 
+## 4.2 Solve Passee Problem 
 ```{r}
 # Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
 
@@ -259,6 +267,7 @@ GL_Completed_PDW <- GL_PDW %>%
   arrange(PID) # Rearrange 
 ```
 
+4.3 Rename Variables
 ```{r}
 # Rename "AE" and the statistical entities
 GL_Completed_PDW <- GL_Completed_PDW |> 
@@ -273,13 +282,70 @@ GL_Completed_PDW <- GL_Completed_PDW |>
 write_xlsx(GL_Completed_PDW, "Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
 ```
 
-# 5. Saving the Plots 
+# 5. Saving the Output 
 
+> Here all plots and tables from the three Research Questions are saved. 
+
+## 5.1 Research Question 1
+
+### 5.1.1 Total Amount of SE Bar-Plot
 ```{r}
 # Saving
-ggsave("Plots/Sequence_Plot 1 (1.4).jpg",  
-width = 10, # 30 too high, between 10 and 20
-height = 16, # 40 too high, between 10 and 20
+ggsave("Plots/1.1 Amount_Plot (RQ 1).jpg",  
+width = 12, # 30 too high, between 10 and 20
+height = 10, # 40 too high, between 10 and 20
 dpi = 700)
 ```
+
+### 5.1.2 Percentages of SE Bar-Plot
+```{r}
+# Saving
+ggsave("Plots/1.2 Percent_Plot (RQ 1).jpg",  
+width = 12, # 30 too high, between 10 and 20
+height = 10, # 40 too high, between 10 and 20
+dpi = 700)
+```
+
+### 5.1.3 Individual Teachers noticing SE Small Multiples Bar-Plots
+```{r}
+# Saving
+ggsave("Plots/1.3 Individual_Plot (RQ 1).jpg",  
+width = 15, # 30 too high, between 10 and 20
+height = 13, # 40 too high, between 10 and 20
+dpi = 700)
+```
+
+### 5.1.4 SE Sequence-Plot  
+```{r}
+# Saving
+ggsave("Plots/1.4 Sequence_Plot (RQ 1).jpg",  
+width = 8, # 30 too high, between 10 and 20
+height = 14, # 40 too high, between 10 and 20
+dpi = 700)
+```
+
+
+### 5.1.5 Average SE noticed by Teachers 
+
+```{r}
+# Using the gt() function
+Average_SE_estimation |> 
+  gt() |> 
+  tab_header(
+    title = "Conditional Effects of Code on Outcome n",
+    subtitle = "Estimates with 95% credible intervals for each code level"
+  ) |> 
+  gtsave("Plots/1.5 SE_conditional_effects.html")  # Save as HTML
+```
+
+
+
+## 5.2 Research Question 2
+
+
+
+
+
+## 5.3 Research Qustion 3 
+
 

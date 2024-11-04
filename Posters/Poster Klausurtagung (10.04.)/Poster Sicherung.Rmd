@@ -1,0 +1,191 @@
+---
+main_topsize: 0.15 #percent coverage of the poster (originally 22%)
+main_bottomsize: 0.09
+title: '**Welche statistischen Entitäten erkennen Lehrkräfte in artifiziellen Halbjahresnoten?**'
+poster_height: "46.8in" # A0 Format in inches
+poster_width: "33.1in"
+font_family: 'Source Sans Pro'
+author:
+  - name: '**Fabian Burkart**'
+    affil: 1
+    main: true
+    email: fabian.burkart@ph-karlsruhe.de
+  - name: Sarah Bez
+    affil: 2
+  - name: Samuel Merk
+    affil: 1
+affiliation:
+  - num: 1
+    address: Pädagogische Hochschule Karlsruhe
+  - num: 2
+    address: Universität Tübingen
+primary_colour: "#007100"
+secondary_colour: "#8cd000" #"#454741" "00a600"
+accent_colour: "#8cd000"
+main_fontfamily: "Source Sans Pro"
+#main_textcol: 
+main_textsize: "160px" # originally 170px
+title_textsize: "90px" # originally 90px
+main_findings:
+  - "**Interpretieren Lehrkräfte Assessmentdaten, adressieren sie häufig einfachere und <br> selten komplexere Entitäten.**" 
+logoleft_name: 'images/Fabi/QR-Größer.png'
+logoright_name: 'images/PHK_2018_Logo_V1_NEGATIV.svg'
+logocenter_name: 'images/Fabi/Logos2.png'
+output: 
+  posterdown::posterdown_betterport:
+    self_contained: false
+    pandoc_args: --mathjax
+    number_sections: false
+bibliography: packages.bib
+link-citations: true
+editor_options: 
+  chunk_output_type: inline
+  markdown: 
+    wrap: 72
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      warning = FALSE,
+                      tidy = FALSE,
+                      message = FALSE,
+                      fig.align = 'center',
+                      out.width = "100%")
+options(knitr.table.format = "html") 
+```
+
+```{=html}
+<style>
+#main-img-right {width: 27%}
+#main-img-center {width: 35%}
+#main-img-left {width: 11.5%}
+</style>
+```
+
+
+<br>
+
+
+# Einleitung
+
+Die Miteinbeziehung schülerbezogener Daten in die tägliche
+Entscheidungsfindung wird von Lehrkräften zunehmend verlangt (Lai &
+Schildkamp, 2013). Untermauert wird dies durch Belege für die Wirksamkeit datenbasierter Entscheidungs-findungen
+(`Data-Based Decision Making`) auf Schülerleistungen (bspw. Carlson et
+al., 2011). Nach Ikemoto & Marsh (2007) existieren im Bildungskontext vier
+Datenformen: Inputdaten, Ergebnisdaten, Prozessdaten und Kontextdaten, wobei
+insbesondere Ergebnisdaten, in Form von schriftlichen Prüfungen und
+Zeugnissen, die wesentlichen Datenformen für Pädagogen sind
+(Mandinach & Gummer, 2016). Damit aus Daten jedoch effektive
+Unterrichtshandlungen abgeleitet werden können, müssen Lehrkräfte diese
+ausreichend verstehen und interpretieren können (Zeuch et al., 2017).
+Hierfür sind Kenntnisse im Bereich der `Data Literacy` unerlässlich
+(Wurster et al., 2023). Mandinach & Gummer (2016) heben hierbei u.a.
+Fähigkeiten im Bereich der "Statistik und Psychometrie" hervor, worunter
+die Autoren auch statistische Entitäten wie zentrale Tendenzen oder
+Streuung subsumieren.
+
+<br> 
+
+# Forschungsfrage
+
+
+<i class="fa fa-question" style="color:darkgreen"></i>
+`Welche statistischen Entitäten werden von Lehrkräften während der Interpretation von arti-fiziellen Halbjahresnoten adressiert?`
+
+<br>
+
+# Methodisches Vorgehen
+
+Hierfür wurden artifizielle Halbjahresnoten generiert, welche
+unterschiedliche statistische Entitäten aufwiesen. Hierunter fallen:
+
+-   <font color="#462268">Ausreißer (OL)</font>
+-   <font color="#29788d">Bimodalität (BM)</font>
+-   <font color="#22a784">Mittelwertsdifferenz (MD)</font>
+-   <font color="#6dc95d">Schiefe (SK)</font>
+-   <font color="#cddf3c">Streuung (DI_UN)</font>
+-   <font color="#8B8000">Streuung als Mittelwertsabstand (DI_DM)</font>
+-   <font color="orange">Streuung als Range (DI_RA)</font>
+
+<br>
+
+Die Lehrkräfte nutzten dynamische Vi-sualisierungen (App), in denen sie
+selbstständig verschiedene Ansichten und statistische Informationen auswählten. Es lagen Daten zu drei Fächern (Deutsch, Englisch und Mathe) und jeweils zwei Klassen vor. 
+
+
+![](./images/Fabi/App_Beispiel.png){width="100%"}
+
+Insgesamt wurden Screencasts von 47 Lehrkräften aus ganz
+Baden-Württemberg (Primar- und Sekundarstufe) erstellt. Unter Einsatz
+der `Think-Aloud Methode` (Leighton 2017) wurden die Lehrkräfte gebeten,
+diese Halbjahresnoten als "critical fried" zu beurteilen und dabei auf
+die Informationen in den Verteilungen zu achten. Mithilfe eines
+deduktiv-induktiven Kodierschemas wurden die audiovisuellen Daten von
+geschulten Hilfskräften (Krippendorf's alpha \>.63) gerated. Bei der
+Auswertung der Kodierungen kamen bisher nur deskriptive Mittel zum
+Einsatz.
+
+<br>
+
+# Deskriptive Ergebnisse
+
+![](./images/Fabi/RQ_1.1.png){width="100%"}
+
+<i class="fa fa-arrow-right" style= "color:black"></i> Die unspezifische Streuung wurde mit Abstand am häufigsten genannt, gefolgt
+von der Streuung als Range. Interessant ist, dass die Streuung als
+Abstand zum Mittelwert äußerst selten adressiert wurde.
+
+<br>
+
+![](./images/Fabi/RQ_1.2.png){width="100%"}
+
+<i class="fa fa-arrow-right" style= "color:black"></i> Die
+unspezifische Streuung wurde nur von 3 Lehrkräften nicht genannt. Die
+Ausreißer und die Schiefe hingegen von weniger als der Hälfte aller
+Lehrkräfte. Die Streuung als Mittelwertsabstand wurde nur von insgesamt
+zwei Lehrkräften adressiert.
+
+<br> 
+![](./images/Fabi/RQ_1.3.2.png){width="100%"}
+
+<i class="fa fa-arrow-right" style= "color:black"></i> Die Lehrkräfte
+adressierten die statistischen Entitäten äußerst heterogen. In 37 Fällen
+haben diejenigen, die die Streuung im Allgemeinen erwähnt haben, auch
+die Streuung als Wertebereich angesprochen.
+
+<br>
+
+# Diskussion und Ausblick
+
+<i class="fa fa-comment" style= "color:black"></i> Die deskriptiven
+Ergebnisse deuten darauf hin, dass die Streuung an für sich am
+einfachsten erkennbar und daher am häufigsten adressiert wurde.
+Darüber hinaus scheinen mehr als die Hälfte der Befragten über eine `Data Literacy` zu verfügen, welche es ihnen ermöglichte Bimodalität, Mittelwertsdifferenz und Streuung als Wertebereich zu adressieren.
+
+<i class="fa fa-comment" style= "color:black"></i> Jedoch wurden komplexere statistische Entitäten, wie der Abstand zum
+Mittelwert als Streuungsangabe, nur überaus selten erkannt. 
+
+<i class="fa fa-bullseye" style= "color:black"></i>
+Inferenzstatistische Auswertung der statistischen Entitäten.
+
+<i class="fa fa-bullseye" style= "color:black"></i> Zweite Forschungsfrage hinsichtlich der `Graph Literacy`. Wie eng sind die
+Komplexität der Ausarbeitungen (Performanz) und die allgemeine Graph
+Literacy (Graph Literacy-Kompetenz, quantifiziert durch ein
+Testergebnis) der Lehrer miteinander assoziiert?
+(<i class="fa fa-qrcode" style= "color:grey"></i>)
+
+
+<br> 
+
+# Referenzen
+
+:::{style="font-size: 0.5em"}
+Carlson, D., Borman, G. D., & Robinson, M. (2011). A Multistate District-Level Cluster Randomized Trial of the Impact of Data-Driven Reform on Reading and Mathematics Achievement. _Educational Evaluation and Policy Analysis, 33_(3), 378–398. <https://doi.org/10.3102/0162373711412765> <br>
+Ikemoto, G. S., & Marsh, J. A. (2007). Cutting through the “Data-Driven” Mantra: Different Conceptions of Data-Driven Decision Making. _Teachers College Record: The Voice of Scholarship in Education, 109_(13), 105–131. <https://doi.org/10.1177/016146810710901310> <br>
+Lai, M. K., & Schildkamp, K. (2013). Data-based Decision Making: An Overview. In K. Schildkamp, M. K. Lai, & L. Earl (Eds.), _Data-based Decision Making in Education_ (pp. 9–22). Springer Netherlands. <https://doi.org/10.1007/978-94-007-4816-3> <br>
+Leighton, J. P. (2017). Using Think-Aloud Interviews and Cognitive Labs in Educational Research. _Oxford University Press._ <https://doi.org/10.1093/acprof:oso/9780199372904.001.0001> <br>
+Mandinach, E. B., & Gummer, E. S. (2016). What does it mean for teachers to be data literate: Laying out the skills, knowledge, and dispositions. _Teaching and Teacher Education, 60_, 366–376. <https://doi.org/10.1016/j.tate.2016.07.011> <br>
+Wurster, S., Bez, S., & Merk, S. (2023). Does learning how to use data mean being motivated to use it? Effects of a data use intervention on data literacy and motivational beliefs of pre-service teachers. _Learning and Instruction, 88_, 101806. <https://doi.org/10.1016/j.learninstruc.2023.101806> <br>
+Zeuch, N., Förster, N., & Souvignier, E. (2017). Assessing Teachers’ Competencies to Read and Interpret Graphs from Learning Progress Assessment: Results from Tests and Interviews. _Learning Disabilities Research & Practice, 32_(1), 61–70. <https://doi.org/10.1111/ldrp.12126>
+:::
