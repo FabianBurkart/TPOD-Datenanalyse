@@ -216,7 +216,7 @@ SE_Percent |>
   geom_bar(stat = "identity") +
   geom_text(
     aes(label = paste(Noticed_Entities,
-                      "(", sprintf("%.1f%%", percentage), ")")),
+                      "(",sprintf("%.1f%%", percentage),")")),
     vjust = -0.5, 
     color = "black",
     size = 8,
@@ -565,8 +565,6 @@ conditional_effects(fit_prediction_Score_SE)
 
 ## 3.3 *Research Question 3*: Is there an association between teachers' general graph literacy (measured by a test score) and their actual graph reading performance (measured by the highest graph literacy level) (RQ 3). 
 
-
-
 TA_D = Think-Aloud duration; 
 INT = Interruption;
 Lvl_01 = graph literacy level 1 (*reading the data*);
@@ -577,6 +575,10 @@ Lvl_03 = graph literacy level 3 (*reading beyond the data*)
 GL_Data <- read_excel("Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
 ```
 
+
+### 3.3.1 Visualization of proportions of the Graph literacy levels per think-aloud 
+
+#### 3.3.1.1 Data wrangling 
 
 Transform the event data to intervall data (with 1 second intervall)
 ```{r}
@@ -590,12 +592,9 @@ GL_Intervall <- GL_Data |>
   splitstackshape::cSplit_e("code", sep = ",", type = "character", drop = F, fill = 0) |> 
   as_tibble() |> 
   arrange(PID)  
-
-View(GL_Intervall)
 ```
 
 Calculating the relative duration of Graph literacy levels
-
 ```{r}
 GL_RelativeDuration <- GL_Intervall |> 
   mutate(Lvl_1 = ifelse(code_Lvl_01 == 1 & code_INT == 0, 1, 0), 
@@ -618,12 +617,60 @@ GL_long_RelativeDuration <- GL_RelativeDuration |>
 ```
 
 
-### 3.3.1 Raincloud Box-Plot
+#### 3.3.1.2 Visualizations 
+
+##### 3.3.1.2.1 Stacked bar plot 
+
+```{r}
+GL_long_RelativeDuration <- GL_long_RelativeDuration |>  
+  group_by(PID) |> 
+  mutate(L3_Values = ifelse(GL_Levels == "Lvl_03_duration", GL_Values, NA)) |> 
+  mutate(L2_Values = ifelse(GL_Levels == "Lvl_02_duration", GL_Values, NA)) |> 
+  ungroup()
+```
 
 ```{r}
 GL_long_RelativeDuration |>  
+  mutate(PID = ordered(PID),
+         PID = fct_reorder(PID, L2_Values),
+         PID = fct_reorder(PID, L3_Values)) |> 
+  ggplot(aes(x = PID, 
+             y = GL_Values, 
+             fill = GL_Levels)) +
+  geom_bar(position="stack", stat="identity") +
+  labs(title = "Graph Literacy Levels per Teacher", 
+       fill = "Graph Literacy Levels") + 
+  ylab("Graph Literacy Values in %") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "right", 
+        legend.justification = "center", 
+        legend.direction = "vertical", 
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10)) +
+  
+  scale_fill_manual(
+    labels=c('Reading the Data', 
+             'Reading between \nthe Data', 
+             'Reading beyond\nthe Data'),
+    values = # For individual coloring
+      c("Lvl_01_duration" = "#30688e",
+        "Lvl_02_duration" = "#20a486", 
+        "Lvl_03_duration" = "#481f70")) +
+
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_text(face = "bold", 
+                           size = 10, angle = 45))
+```
+
+
+##### 3.3.1.2.2  Raincloud Box-Plot
+```{r}
+GL_long_RelativeDuration |>  
   ggplot(aes(x=factor(GL_Levels, 
-             level=c("Lvl_01_duration", "Lvl_02_duration", "Lvl_03_duration")),
+             level=c("Lvl_01_duration", 
+                     "Lvl_02_duration", 
+                     "Lvl_03_duration")),
              y=GL_Values,
              fill = GL_Levels)) +
   stat_halfeye(adjust = 0.5, 
@@ -659,7 +706,7 @@ GL_long_RelativeDuration |>
       aes(label = round(..y.., 1), color = GL_Levels),
       fontface = "bold",
       size = 6,
-      vjust = - 6.5,
+      vjust = - 2.5,
       hjust = 1.6) +
     coord_flip() +
     ggtitle("Distribution of Graph Literacy Levels") +
@@ -677,23 +724,8 @@ GL_long_RelativeDuration |>
 
 ### 3.3.2 Correlation between Test Score and GL-Level 
 
-#### 3.3.2.1 Create count data 
-```{r}
-# Summarize count of SE per teacher 
-SE_Count <- SE_Amount |>  
-  group_by(code, PID) |> 
-  summarize(n = n()) |>  
-  ungroup() |> 
-  # Add lines for all possible combinations of Code and PID as NA
-  full_join(expand_grid(code = unique(SE_Amount$code), PID = unique(SE_Amount$PID))) |> 
-  # Recode these NAs as 0
-  mutate(n = ifelse(is.na(n), 0, n)) 
+> Here zero-inflated Beta-Regression? 
 
-# Check distribution
-SE_Count |>
-  ggplot(aes(x = n)) +
-  geom_histogram() +
-  facet_wrap(~code)
-```
+
 
 

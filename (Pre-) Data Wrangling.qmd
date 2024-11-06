@@ -335,17 +335,48 @@ Average_SE_estimation |>
     title = "Conditional Effects of Code on Outcome n",
     subtitle = "Estimates with 95% credible intervals for each code level"
   ) |> 
-  gtsave("Plots/1.5 SE_conditional_effects.html")  # Save as HTML
+  gtsave("Plots/1.5 SE_conditional_effects (RQ 1).html")  # Save as HTML
 ```
 
 
 
 ## 5.2 Research Question 2
 
+```{r}
+hypothesis |> 
+  gt() |> 
+  tab_header(
+    title = "Hypothesis test for class b",
+    subtitle = "Estimates with 95% credible intervals for each code level"
+  ) |> 
+  gtsave("Plots/2.1 SE_conditional_effects (RQ 2).html")  # Save as HTML
+```
 
 
+```{r}
+# Saving
+ggsave("Plots/2.2 Incidence_Rate_Ratios (RQ 2).jpg",  
+width = 8, # 30 too high, between 10 and 20
+height = 14, # 40 too high, between 10 and 20
+dpi = 700)
+```
 
 
 ## 5.3 Research Qustion 3 
 
+```{r}
+# Saving
+ggsave("Plots/3.1 Levels_per_Teacher (RQ 3).jpg",  
+width = 10, # 30 too high, between 10 and 20
+height = 6, # 40 too high, between 10 and 20
+dpi = 700)
+```
 
+
+```{r}
+# Saving
+ggsave("Plots/3.2 Distribution_GraphLiteracy (RQ 3).jpg",  
+width = 10, # 30 too high, between 10 and 20
+height = 6, # 40 too high, between 10 and 20
+dpi = 700)
+```
