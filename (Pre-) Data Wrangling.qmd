@@ -328,7 +328,7 @@ dpi = 700)
 ### 5.1.5 Average SE noticed by Teachers 
 
 ```{r}
-# Using the gt() function
+# Using the gt() function for the HTML Output 
 Average_SE_estimation |> 
   gt() |> 
   tab_header(
@@ -338,6 +338,13 @@ Average_SE_estimation |>
   gtsave("Plots/1.5 SE_conditional_effects (RQ 1).html")  # Save as HTML
 ```
 
+```{r}
+# Saving
+ggsave("Plots/1.5 Conditional-Effects_Plot (RQ 1).jpg",  
+width = 9, # 30 too high, between 10 and 20
+height = 10, # 40 too high, between 10 and 20
+dpi = 700)
+```
 
 
 ## 5.2 Research Question 2
