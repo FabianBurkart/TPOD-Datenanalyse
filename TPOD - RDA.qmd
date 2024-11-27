@@ -29,6 +29,9 @@ cat("RStudio version:", rstudio_version, "\n")
 ```
 
 ```{r}
+
+#@Fabian: Hier alle Packages die wir **nicht** benutzen entfernen
+
 library(readxl)
 library(lubridate)
 library(skimr)
@@ -479,7 +482,9 @@ SE_Count |>
 ################# Model 1 ########################
 fit_intercept01 <- brm(n ~ code + (1|PID),
                        data = SE_Count,
-                       family = poisson())
+                       family = poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
 
 summary(fit_intercept01)
 
@@ -491,7 +496,9 @@ pp_check(fit_intercept01,
 ################# Model 2 ########################
 fit_intercept02 <- brm(n ~ code + (1|PID), 
                        data = SE_Count,
-                       family = negbinomial())
+                       family = negbinomial(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
 
 pp_check(fit_intercept02,
          type = "bars")
@@ -499,7 +506,9 @@ pp_check(fit_intercept02,
 ################# Model 3 ########################
 fit_intercept03 <- brm(n ~ code + (1|PID), 
                        data = SE_Count,
-                       family = zero_inflated_poisson())
+                       family = zero_inflated_poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
 
 pp_check(fit_intercept03,
          type = "bars")
@@ -507,17 +516,25 @@ pp_check(fit_intercept03,
 ################# Model 4 ########################
 fit_intercept04 <- brm(n ~ code + (1|PID), 
                        data = SE_Count,
-                       family = zero_inflated_negbinomial())
+                       family = zero_inflated_negbinomial(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
 
 pp_check(fit_intercept04,
          type = "bars")
 
 # Compare the models
-loo_compare(
-  add_criterion(fit_intercept01, c("loo", "waic")),
-  add_criterion(fit_intercept03, c("loo", "waic")),
-  add_criterion(fit_intercept04, c("loo", "waic")),
-  add_criterion(fit_intercept02, c("loo", "waic")))
+loo_fit_intercept01 <- loo_moment_match(fit_intercept01, 
+                                        loo = loo(fit_intercept01))
+loo_fit_intercept03 <- loo_moment_match(fit_intercept03, 
+                                        loo = loo(fit_intercept03))
+loo_fit_intercept04 <- loo_moment_match(fit_intercept04, 
+                                        loo = loo(fit_intercept04))
+loo_fit_intercept02 <- loo_moment_match(fit_intercept02, 
+                                        loo = loo(fit_intercept02))
+
+loo_compare(loo_fit_intercept01, loo_fit_intercept03, loo_fit_intercept04,
+            loo_fit_intercept02)
 ```
 
 #### 3.1.6.3 Estimate average SE per Teacher 
@@ -529,6 +546,7 @@ Average_SE_estimation <- conditional_effects(fit_intercept01)[[1]] |>
 #### 3.1.6.4 Plotting the Estimates 
 
 ```{r}
+#@Fabian: Hier vllt die Wiskers bischen heller und auf die Punkte, dafür keine width?
 Average_SE_estimation |> 
 ggplot(aes(x = estimate__, y = factor(code, 
              level=c("DI_US",
@@ -586,13 +604,14 @@ Test_Graph_Literacy <- read_xlsx("Data/TPOD_Test_Score_Graph_Literacy.xlsx")
 ```
 
 
-### 3.2.2 Calculate model that incorporates the variable `Test_Score` as a predictor
+### 3.2.2 Estimate model that incorporates the variable `Test_Score` as a predictor
 ```{r}
 fit_prediction_Score_SE <- 
   brm(n ~ code + Test_Score + (1|PID), 
       data = SE_Count |> 
         full_join(Test_Graph_Literacy),
       family = poisson(), 
+      save_pars = save_pars(all = TRUE),
       seed = 2258852)
 
 pp_check(fit_prediction_Score_SE, type = "bars")
@@ -601,14 +620,44 @@ summary(fit_prediction_Score_SE)
 
 conditional_effects(fit_prediction_Score_SE) [[1]] |>  
   mutate_if(is.numeric, function(x) round(x, digits = 1))
-
-hypothesis(fit_prediction_Score_SE, "Test_Score > 0")
-
 hypothesis(fit_prediction_Score_SE, "exp(Test_Score) > 1")
 
-sjPlot::tab_model(fit_prediction_Score_SE) # das hier ist anders, die hypothese ist inferenzstatistisch, das hier scheint ne effektstärke zu sein. 
-# Unterschied zwichen Evidence Ratio und Psterior Probability? 
-conditional_effects(fit_prediction_Score_SE)
+# model with interaction
+fit_prediction_Score_SE_interaction <- 
+  brm(n ~ code*scale(Test_Score) + (1|PID), 
+      data = SE_Count |> 
+        full_join(Test_Graph_Literacy),
+      family = poisson(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 2258852)
+pp_check(fit_prediction_Score_SE_interaction, type = "bars")
+summary(fit_prediction_Score_SE_interaction)
+conditional_effects(fit_prediction_Score_SE_interaction) [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+# Model Comparison
+## fit "null model" (model with dummy variables for code only) again with only the participants with a test score
+fit_intercept01_filtered <-
+  brm(
+    n ~ code + (1 | PID),
+    data = SE_Count %>% filter(PID %in% (Test_Graph_Literacy %>% na.omit() %>% pull(PID))),
+    family = poisson(),
+    cores = 4,
+    save_pars = save_pars(all = TRUE)
+  )
+
+loo_fit_intercept01_filtered <- 
+  loo_moment_match(fit_intercept01_filtered,
+                   loo = loo(fit_intercept01_filtered))
+loo_fit_prediction_Score_SE <- 
+  loo_moment_match(fit_prediction_Score_SE,
+                   loo = loo(fit_prediction_Score_SE))
+loo_fit_prediction_Score_SE_interaction <- 
+  loo_moment_match(fit_prediction_Score_SE_interaction,
+                   loo = loo(fit_prediction_Score_SE_interaction))
+loo_compare(loo_fit_intercept01_filtered, loo_fit_prediction_Score_SE, loo_fit_prediction_Score_SE_interaction)
+
+sjPlot::tab_model(fit_intercept01, fit_prediction_Score_SE, fit_prediction_Score_SE_interaction)
 ```
 
 
@@ -676,7 +725,9 @@ GL_long_RelativeDuration <- GL_long_RelativeDuration |>
   group_by(PID) |> 
   mutate(L3_Values = ifelse(GL_Levels == "Lvl_03_duration", GL_Values, NA)) |> 
   mutate(L2_Values = ifelse(GL_Levels == "Lvl_02_duration", GL_Values, NA)) |> 
-  ungroup()
+  ungroup() %>% 
+  mutate(GL_Values01 = GL_Values/max(GL_Values)) %>% 
+  full_join(Test_Graph_Literacy)
 ```
 
 ```{r}
@@ -774,7 +825,46 @@ GL_long_RelativeDuration |>
 
 ### 3.3.2 Correlation between Test Score and GL-Level 
 
-> Here zero-inflated Beta-Regression? 
+```{r}
+GL_long_RelativeDuration %>% 
+  ggplot(aes(GL_Values, fill = GL_Levels)) +
+  geom_density(alpha = .5) +
+  theme_minimal()
+```
+
+```{r}
+fit_prediction_Score_RelativeDuration00 <- 
+  brm(bf(GL_Values ~ GL_Levels + (1|PID),
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels),
+      data = GL_long_RelativeDuration %>% filter(!is.na(Test_Score)),
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+pp_check(fit_prediction_Score_RelativeDuration00)
+conditional_effects(fit_prediction_Score_RelativeDuration00)
+
+fit_prediction_Score_RelativeDuration01 <- 
+  brm(bf(GL_Values ~ GL_Levels*Test_Score + (1|PID),
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels*Test_Score),
+      data = GL_long_RelativeDuration,
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+pp_check(fit_prediction_Score_RelativeDuration01)
+conditional_effects(fit_prediction_Score_RelativeDuration01)
+
+loo_compare(
+  add_criterion(fit_prediction_Score_RelativeDuration00, "loo"),
+  add_criterion(fit_prediction_Score_RelativeDuration01, "loo")
+  )
+sjPlot::tab_model(fit_prediction_Score_RelativeDuration00, fit_prediction_Score_RelativeDuration01)
+```
+
+
 
 
 
