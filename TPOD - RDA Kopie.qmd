@@ -1,0 +1,1467 @@
+---
+title: "How do Teachers read and interpret data from artificial mid-term grades?"
+format: 
+    html:
+        toc: true
+        toc-title: Contents
+        toc-location: left
+lang: "eng"
+editor_options: 
+  chunk_output_type: console
+---
+
+# 0. Version and Packages 
+
+
+```{r}
+
+#@Fabian: Hier alle Packages die wir **nicht** benutzen entfernen
+
+library(readxl)
+library(lubridate)
+library(skimr)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(DescTools)
+library(lpSolve)
+library(irr)
+library(viridisLite)
+library(viridis)
+library(devtools)
+library(hrbrthemes)
+library(ggalt)
+library(heuristicsmineR)
+library(scales)
+library(bupaR)
+library(gghalves)
+library(openxlsx)
+library(distributional)
+library(ggdist)
+library(stringr)
+library(cluster)
+library(circlize)
+library(sjmisc)
+library(partitionComparison)
+library(brms)
+library(tidyverse)
+library(modelsummary)
+
+
+
+#Packete 
+library(skimr)
+
+options(mc.cores=parallel::detectCores ())
+set.seed(2258852)
+```
+
+
+# 1. Demographics 
+
+```{r}
+demographics <- read_xlsx("data/TPOD_Demographics.xlsx")
+glimpse(demographics)
+skim(demographics)
+```
+
+
+## 1.1 Gender 
+
+```{r}
+demographics |> 
+group_by(sex) |> 
+ summarise(gender_count = n(),
+           gender_Per = gender_count / 47 * 100) 
+```
+
+## 1.2 Age 
+```{r}
+describe(as.numeric(demographics$age))
+```
+
+
+## 1.3 Teaching Experience
+```{r}
+describe(as.numeric(demographics$exp))
+```
+
+## 1.4 Education level
+
+p = primary education, s = secondary education
+```{r}
+demographics%>% 
+group_by(prim_sec) %>%
+ summarise(edlevel_count = n(),
+           edlevel_Per = edlevel_count / 47 * 100)
+```
+
+Subjects???
+
+```{r}
+demographics%>% 
+  reframe(stem = sum(stem),
+          stem_Per = stem / 48 * 100, 
+          lang = sum(lang),
+          lang_Per = lang / 48 * 100,
+          social = sum(social),
+          social_Per = social / 48 * 100,
+          art = sum(art),
+          art_Per = art / 48 * 100)
+```
+
+
+
+
+# 2. Inter-Rater Reliability Coding 
+
+
+
+
+
+
+
+# 3. Research Questions 
+
+## 3.1 *Research Question 1*: Which statistical entities have been addressed by teachers while reading and interpreting artificial mid-term grades?
+
+TA_D = Think-Aloud duration, OL = Outliers; 
+BM = Bimodality; MD = Mean difference; 
+SK = Skewness; DI_US = Dispersion unspecific, 
+DI_DM = Dispersion Distance to the mean, DI_RA = Dispersion range
+
+```{r}
+# Import statistical entities (SE) data set 
+SE_Data <- read_excel("Data/TPOD_Consensus_Statistical_Entities.xlsx")
+```
+
+
+### 3.1.1 Visualizations of total SE amount 
+
+```{r}
+# Create a new DS with the SE (remove TA_D)
+SE_Amount <- SE_Data |> 
+  filter(code != "TA_D") 
+
+SE_Amount |> 
+  ggplot(aes(x = factor(code, 
+  # For ordering the Entities you need the `facotr()` function
+             level=c("OL", 
+                     "BM", 
+                     "MD", 
+                     "SK", 
+                     "DI_US",
+                     "DI_DM",
+                     "DI_RA")),
+              fill = code)) +
+  geom_bar(aes(fill = code), 
+           show.legend = FALSE) + 
+  geom_text(
+     aes(label=after_stat(count)),
+     stat='count',
+     nudge_y = 5,
+     fontface = "bold",
+     size = 8) +
+    scale_fill_manual(values = 
+# Adjust colors individually
+                         c("OL" = "#462268",
+                           "BM" ="#29788d",
+                           "MD"= "#22a784", 
+                           "SK" = "#6dc95d",
+                           "DI_US" = "#cddf3c",
+                           "DI_DM" = "#8a8000",
+                           "DI_RA" = "#FFA500")) +
+  ggtitle("Total amount of Statistical Entities") +
+    theme_minimal() + # No grey background
+    theme(axis.title.x = element_text(size = 15),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none") + 
+    scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion \ndistance to the mean", 
+                                "DI_RA" = "Dispersion \nrange")) +
+    xlab("") +
+    ylab("Amount") 
+```
+
+
+### 3.1.2 Visualisation of percentages of teachers noticing SE at least once
+
+```{r}
+SE_Percent <- SE_Amount |> 
+  group_by(code) |> 
+  summarize(Noticed_Entities = n_distinct(PID)) |> 
+  # Calculate the percentage of participants who noticed each SE per TA-Session at least once
+  mutate(percentage = (Noticed_Entities / 48) * 100)
+
+
+SE_Percent |>
+  ggplot(aes(x = factor(code, 
+  # For ordering the Entities you need the `facotr()` function
+             level=c("DI_DM",
+                     "OL",
+                     "SK",
+                     "BM", 
+                     "MD", 
+                     "DI_RA",
+                     "DI_US")),
+             y = Noticed_Entities,
+             fill = code)) +
+  geom_bar(stat = "identity") +
+  geom_text(
+    aes(label = paste(Noticed_Entities,
+                      "(",sprintf("%.1f%%", percentage),")")),
+    vjust = -0.5, 
+    color = "black",
+    size = 8,
+    fontface = "bold") +
+  scale_fill_manual(values = 
+# Adjust colors individually
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c")) +
+  ggtitle("Statistical Entities Percentage") +
+    theme_minimal() + # No grey background
+    theme(
+          axis.title.x = element_text(size = 15),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none") +  
+    scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion \ndistance to the mean", 
+                                "DI_RA" = "Dispersion \nrange")) +
+    xlab("") + 
+    ylab("Amount") 
+```
+
+
+### 3.1.3 Visualizations of total SE amount for each teacher individually
+
+```{r}
+# Group_by Teacher and then count the amount of the SE. For that, a separate object, that addresses the *individual* amounts,is created. 
+SE_Individual <- SE_Amount |>
+  group_by(PID) |> 
+  count(code) |> 
+  rename(Amount = n)
+
+
+SE_Individual |>
+  ggplot(aes(x = factor(code, 
+                 level=c("OL", "BM","MD", "SK", "DI_US", "DI_DM", "DI_RA")),       
+             y = Amount,
+             fill = code)) +
+  geom_bar(stat="identity") +
+    scale_fill_manual(values = 
+                        # Adjust colors individually
+                         c("OL" = "#462268",
+                           "BM" ="#29788d",
+                           "MD"= "#22a784", 
+                           "SK" = "#6dc95d",
+                           "DI_US" = "#cddf3c",
+                           "DI_DM" = "#8a8000",
+                           "DI_RA" = "#FFA500")) +
+  # For the individual values above the bars
+  geom_text(aes(label = Amount), vjust = -0.3, size = 3) +
+  # Adjusting the y-Axis scale
+  scale_y_continuous(limits = c(0, 10), 
+                     breaks = seq(0, 10, by = 2)) +
+  # Creating a `small multiple` using `facet_wrap()`
+  facet_wrap(~PID, ncol = 6) +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_text(
+            size = 8, 
+            angle = 90,
+            hjust = 1,              
+            vjust = 0.5,            
+            margin = margin(t = 5),
+            lineheight = 0.8),
+          axis.text.y = element_text(size = 10),
+          legend.position = "none") + 
+   scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion distance \nto mean", 
+                                "DI_RA" = "Dispersion range")) +
+    xlab("") + 
+    ylab("Amount") 
+```
+
+
+### 3.1.4 Visualization of sequences in which SE are noticed per teacher individually
+
+#### 3.1.4.1 Data Wrangling 
+```{r}
+SE_Sequences <- SE_Data |> 
+  rename("Code" = "code", 
+         "start_P" = "start",
+         "end_P" = "end") |>
+  filter(Code %in% c("TA_D", "OL", "BM", "MD", "SK", "DI_US", "DI_DM", "DI_RA")) |> 
+  mutate(Code_Unbundled = case_when(grepl("OL", Code) ~ "Outliers",
+                                      grepl("BM", Code) ~ "Bimodality",
+                                      grepl("MD", Code) ~ "Mean Difference",
+                                      grepl("SK", Code) ~ "Skewness",
+                                      grepl("DI_US", Code) ~ "Dispersion Unspecific",
+                                      grepl("DI_DM", Code) ~ "Dispersion Mean Distance",
+                                      grepl("DI_RA", Code) ~ "Dispersion Range",
+                                      grepl("TA_D", Code) ~ "Think-Aloud",
+                                      TRUE ~ "other"),
+         Code_Legend = case_when(Code == "OL" ~ "Outliers",
+                                  Code == "BM" ~ "Bimodality",
+                                  Code == "MD" ~ "Mean Difference",
+                                  Code == "SK" ~ "Skewness",
+                                  Code == "DI_US" ~ "Dispersion Unspecific",
+                                  Code == "DI_DM" ~ "Dispersion Mean Distance",
+                                  Code == "DI_RA" ~ "Dispersion Range",
+                                  Code == "TA_D" ~ "Think-Aloud_Duration"),
+         Code_Legend_AR = ifelse(Code_Unbundled == "Outliers", Code_Legend, NA), # OL
+         Code_Legend_BM = ifelse(Code_Unbundled == "Bimodality", Code_Legend, NA), # BM
+         Code_Legend_MD = ifelse(Code_Unbundled == "Mean_Difference", Code_Legend, NA), # MD
+         Code_Legend_SC = ifelse(Code_Unbundled == "Skewness", Code_Legend, NA), # SK
+         Code_Legend_US = ifelse(Code_Unbundled == "Dispersion Unspecific", Code_Legend, NA), # DI_US
+         Code_Legend_AM = ifelse(Code_Unbundled == "Dispersion Mean Distance", Code_Legend, NA), # DI_DM
+         Code_Legend_WB = ifelse(Code_Unbundled == "Dispersion Range", Code_Legend, NA), # DI_RA
+         Code_Legend_AE = ifelse(Code_Unbundled == "Think-Aloud_Duration", Code_Legend, NA), # TA_D
+         `Teacher` = paste("Teacher", as.numeric(as.factor(PID))),
+         `Teacher` = factor(Teacher, ordered = TRUE, levels =
+                              c("Teacher 1", "Teacher 2", "Teacher 3", "Teacher 4", "Teacher 5", "Teacher 6", "Teacher 7", "Teacher 8", "Teacher 9", "Teacher 10", "Teacher 11", "Teacher 12", "Teacher 13", "Teacher 14", "Teacher 15", "Teacher 16", "Teacher 17", "Teacher 18", "Teacher 19", "Teacher 20", "Teacher 21", "Teacher 22", "Teacher 23", "Teacher 24", "Teacher 25", "Teacher 26", "Teacher 27", "Teacher 28", "Teacher 29", "Teacher 30", "Teacher 31", "Teacher 32", "Teacher 33", "Teacher 34", "Teacher 35", "Teacher 36", "Teacher 37", "Teacher 38", "Teacher 39", "Teacher 40", "Teacher 41", "Teacher 42", "Teacher 43", "Teacher 44", "Teacher 45", "Teacher 46", "Teacher 47", "Teacher 48")),
+         Code_Legend = as_factor(Code_Legend)) 
+```
+
+
+#### 3.1.4.2 Visualization  
+
+```{r}
+ggplot(SE_Sequences, aes(y = Code_Unbundled)) + 
+  # 1. Segment: TA Duration
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Think-Aloud") |> 
+                 mutate("Think-Aloud" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Think-Aloud"), 
+               lineend = "butt", linewidth = 2.5) +
+  # 2. Segment: Outliers
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Outliers") |> 
+                 mutate("Outliers" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Outliers"), 
+               lineend = "butt", linewidth = 3) +
+  # 3. Segment: Bimodality
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Bimodality") |> 
+                 mutate("Bimodality" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Bimodality"), 
+               lineend = "butt", linewidth = 3) +
+  # 4. Segment: Mean Difference
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Mean Difference") |> 
+                 mutate("Mean Difference" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Mean Difference"), 
+               lineend = "butt", linewidth = 3) +
+  # 5. Segment: Skewness
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Skewness") |> 
+                 mutate("Skewness" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Skewness"), 
+               lineend = "butt", linewidth = 3) +
+  # 6. Segment: Dispersion Unspecific
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Dispersion Unspecific") |> 
+                 mutate("Dispersion Unspecific" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Dispersion Unspecific"), 
+               lineend = "butt", linewidth = 3) +
+  # 7. Segment: Dispersion Mean Distance
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Dispersion Mean Distance") |> 
+                 mutate("Dispersion Mean Distance" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Dispersion Mean Distance"), 
+               lineend = "butt", linewidth = 3) +
+  # 8. Segment: Dispersion Range
+  geom_segment(data = SE_Sequences |> 
+                 filter(Code_Unbundled == "Dispersion Range") |> 
+                 mutate("Dispersion Range" = Code_Legend),
+               aes(x = start_P, xend = end_P, yend = Code_Unbundled, 
+                   color = "Dispersion Range"), 
+               lineend = "butt",linewidth = 3) +
+  guides(color=guide_legend(nrow = 2, title = "Statistical Entities")) + 
+  facet_wrap(~`PID`, ncol = 4) + 
+  scale_colour_manual(values = 
+                        c("Outliers" = "#481f70",
+                          "Bimodality" = "#30688e",
+                          "Mean Difference" = "#20a486",
+                          "Skewness" = "#8fd744",
+                          "Dispersion Unspecific" = "#cddf3c",
+                          "Dispersion Mean Distance" = "#8a8000",
+                          "Dispersion Range" = "#FFA500", 
+                          "Think-Aloud" = "grey60"),
+                      breaks = 
+                        c("Outliers",
+                          "Bimodality",
+                          "Mean Difference",
+                          "Skewness",
+                          "Dispersion Unspecific",
+                          "Dispersion Mean Distance",
+                          "Dispersion Range", 
+                          "Think-Aloud")) + 
+  labs(title = ) + 
+  scale_y_discrete(limits = c("Think-Aloud", 
+                              "Outliers", 
+                              "Bimodality", 
+                              "Mean Difference",          
+                              "Skewness",
+                              "Dispersion Unspecific",
+                              "Dispersion Mean Distance",
+                              "Dispersion Range")) +
+  xlab("Time (in min)") + 
+  ylab("") +
+ # here was originally theme_minimal()
+  theme(legend.position = "bottom", 
+        legend.justification = "center", 
+        legend.direction = "horizontal",
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 7),
+        plot.title = element_blank(),
+        axis.text = element_text(size = 7),
+        axis.title = element_text(size = 7),
+        axis.title.y = element_blank(),
+        strip.text.x = element_text(size = 7)) 
+```
+
+
+### 3.1.5 Bayesian regression analysis for average SE per teacher 
+
+#### 3.1.6.1 Create count data 
+```{r}
+# Summarize count of SE per teacher 
+SE_Count <- SE_Amount |>  
+  group_by(code, PID) |> 
+  summarize(n = n()) |>  
+  ungroup() |> 
+  # Add lines for all possible combinations of Code and PID as NA
+  full_join(expand_grid(code = unique(SE_Amount$code), PID = unique(SE_Amount$PID))) |> 
+  # Recode these NAs as 0
+  mutate(n = ifelse(is.na(n), 0, n))
+
+# Check distribution
+SE_Count |>
+  ggplot(aes(x = n)) +
+  geom_histogram() +
+  facet_wrap(~code)
+```
+
+
+#### 3.1.6.2 Compare models for different distribution assumptions 
+```{r}
+# Fit model
+
+################# Model 0 ########################
+# Model with seed for replicability (poisson) 
+
+fit_intercept00 <-  brm(n ~ code + (1|PID),
+                       data = SE_Count,
+                       family = poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE),
+                       seed = 2258852)
+
+summary(fit_intercept00) # log-scaled regression coefficients 
+
+plot(fit_intercept00)
+
+pp_check(fit_intercept00,
+         type = "bars")
+
+conditional_effects(fit_intercept00)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 2))
+
+# Modell00 (mit Seed) fittet nicht so gut wie Modell01 (pp_check), hat aber, bis auf DI_RA, die gleichen erwartbaren Mittelwerte. Bei DI_RA gibt es nur einen Unterschied von 0,1. 
+
+################# Model 1 ########################
+fit_intercept01 <- brm(n ~ code + (1|PID),
+                       data = SE_Count,
+                       family = poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
+
+                       
+summary(fit_intercept01)
+
+plot(fit_intercept01)
+
+pp_check(fit_intercept01,
+         type = "bars")
+
+conditional_effects(fit_intercept01)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+################# Model 2 ########################
+fit_intercept02 <- brm(n ~ code + (1|PID), 
+                       data = SE_Count,
+                       family = negbinomial(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
+
+pp_check(fit_intercept02,
+         type = "bars")
+
+################# Model 3 ########################
+fit_intercept03 <- brm(n ~ code + (1|PID), 
+                       data = SE_Count,
+                       family = zero_inflated_poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
+
+pp_check(fit_intercept03,
+         type = "bars")
+
+################# Model 4 ########################
+fit_intercept04 <- brm(n ~ code + (1|PID), 
+                       data = SE_Count,
+                       family = zero_inflated_negbinomial(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE))
+
+pp_check(fit_intercept04,
+         type = "bars")
+
+# Compare the models
+loo_fit_intercept01 <- loo_moment_match(fit_intercept01, 
+                                        loo = loo(fit_intercept01))
+loo_fit_intercept03 <- loo_moment_match(fit_intercept03, 
+                                        loo = loo(fit_intercept03))
+loo_fit_intercept04 <- loo_moment_match(fit_intercept04, 
+                                        loo = loo(fit_intercept04))
+loo_fit_intercept02 <- loo_moment_match(fit_intercept02, 
+                                        loo = loo(fit_intercept02))
+
+loo_compare(loo_fit_intercept01, loo_fit_intercept03, loo_fit_intercept04,
+            loo_fit_intercept02)
+```
+
+#### 3.1.6.3 Estimate average SE per Teacher 
+```{r}
+Average_SE_estimation <- conditional_effects(fit_intercept01)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+```
+
+#### 3.1.6.4 Visualization of the Estimates 
+
+```{r}
+Average_SE_estimation |> 
+ggplot(aes(x = estimate__, y = factor(code, 
+             level=c("DI_US",
+                     "DI_RA",
+                     "MD",
+                     "BM", 
+                     "SK", 
+                     "OL",
+                     "DI_DM")),
+  color = code)) + 
+  geom_point(size = 5) + 
+  geom_errorbar(aes(xmin = lower__, xmax = upper__), linewidth = 1, width = 0.0) + 
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c")) +
+  ggtitle("Conditional effects for the statistical entities") +
+  scale_y_discrete(labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion\nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+ 
+  scale_x_continuous(breaks = seq(0, 4.1, by = 0.5)) +
+  geom_text(aes(label = round(estimate__, 1)), 
+            vjust = -1.5, 
+            size = 4, 
+            fontface = "bold") +
+  xlab("") + 
+  ylab("") +
+  theme_minimal()+
+   theme(
+    axis.title.x = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 15, face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16)) +  
+  theme(legend.position = "none")
+```
+
+
+## 3.2 *Research Question 2*: Is there an association between teachers' general graph literacy (measured by a test score) and their ability to recognize said statistical entities?
+
+
+> Is the amount of mentioning statistical entities predictable with the Data literacy test Score?
+
+### 3.2.1 Import graph literay Test score 
+```{r}
+Test_Graph_Literacy <- read_xlsx("Data/TPOD_Test_Score_Graph_Literacy.xlsx")
+```
+
+
+### 3.2.2 Estimate model that incorporates the variable `Test_Score` as a predictor
+```{r}
+################# Model 1 (without interation) ########################
+
+fit_prediction_Score_SE <- 
+  brm(n ~ code + Test_Score + (1|PID), 
+      data = SE_Count |> 
+        full_join(Test_Graph_Literacy),
+      family = poisson(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 2258852)
+
+
+# Checks 
+pp_check(fit_prediction_Score_SE, type = "bars")
+
+# Calculations 
+summary(fit_prediction_Score_SE)
+
+
+## Conditional Effects ##
+conditional_effects(fit_prediction_Score_SE) [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+### Isolate Test_Score in Conditional Effects ###
+conditional_effects(fit_prediction_Score_SE, "Test_Score") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> viel zu große Tabelle (100 Zeilen)
+
+conditional_effects(fit_prediction_Score_SE, "Test_Score", resolution = 20)[[1]] |>
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> Anpassung der Zeilen durch `resulution` 
+
+
+plot(conditional_effects(fit_prediction_Score_SE, "Test_Score"))
+
+
+## Hypothesis Testing ##
+hypothesis(fit_prediction_Score_SE, "exp(Test_Score) > 1")
+
+
+
+
+################# Model 2 (with interation) ########################
+
+fit_prediction_Score_SE_interaction01 <- 
+  brm(n ~ code * Test_Score + (1|PID), 
+      data = SE_Count |> 
+        full_join(Test_Graph_Literacy),
+      family = poisson(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 2258852)
+
+# Checks 
+pp_check(fit_prediction_Score_SE_interaction01, type = "bars")
+
+# Calculations 
+summary(fit_prediction_Score_SE_interaction01)
+
+## Conditional Effects ##
+conditional_effects(fit_prediction_Score_SE_interaction01) [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+### Isolate Test_Score in Conditional Effects ###
+conditional_effects(fit_prediction_Score_SE_interaction01, "Test_Score") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> viel zu große Tabelle (100 Zeilen)
+
+conditional_effects(fit_prediction_Score_SE_interaction01, "Test_Score", resolution = 20)[[1]] |>
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> Anpassung der Zeilen durch `resulution` 
+
+
+plot(conditional_effects(fit_prediction_Score_SE_interaction01, "Test_Score"))
+ 
+hypothesis(fit_prediction_Score_SE_interaction01, "exp(Test_Score) > 1")
+
+################# Model 2 (with interation & scale) ########################
+
+fit_prediction_Score_SE_interaction <- 
+  brm(n ~ code*scale(Test_Score) + (1|PID), 
+      data = SE_Count |> 
+        full_join(Test_Graph_Literacy),
+      family = poisson(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 2258852)
+
+# Checks 
+pp_check(fit_prediction_Score_SE_interaction, type = "bars")
+
+# Calculations 
+summary(fit_prediction_Score_SE_interaction)
+
+## Conditional Effects ##
+conditional_effects(fit_prediction_Score_SE_interaction) [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+### Isolate Test_Score in Conditional Effects ###
+conditional_effects(fit_prediction_Score_SE_interaction, "Test_Score") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> viel zu große Tabelle (100 Zeilen)
+
+conditional_effects(fit_prediction_Score_SE_interaction, "Test_Score", resolution = 20)[[1]] |>
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+# -> Anpassung der Zeilen durch `resulution` 
+
+
+plot(conditional_effects(fit_prediction_Score_SE_interaction, "Test_Score"))
+
+hypothesis(fit_prediction_Score_SE_interaction, "exp(scaleTest_Score) > 1")
+
+
+
+################# Model Comparisons ########################
+
+# fit "null model" (model with dummy variables for code only) again with only the participants with a test score
+
+fit_intercept01_filtered <-
+  brm(
+    n ~ code + (1 | PID),
+    data = SE_Count %>% filter(PID %in% (Test_Graph_Literacy %>% na.omit() %>% pull(PID))),
+    family = poisson(),
+    cores = 4,
+    save_pars = save_pars(all = TRUE)
+  )
+
+loo_fit_intercept01_filtered <- 
+  loo_moment_match(fit_intercept01_filtered,
+                   loo = loo(fit_intercept01_filtered))
+
+loo_fit_prediction_Score_SE <- 
+  loo_moment_match(fit_prediction_Score_SE,
+                   loo = loo(fit_prediction_Score_SE))
+
+loo_fit_prediction_Score_SE_interaction <- 
+  loo_moment_match(fit_prediction_Score_SE_interaction,
+                   loo = loo(fit_prediction_Score_SE_interaction))
+
+loo_compare(loo_fit_intercept01_filtered, loo_fit_prediction_Score_SE, loo_fit_prediction_Score_SE_interaction)
+
+sjPlot::tab_model(fit_intercept01, fit_prediction_Score_SE, fit_prediction_Score_SE_interaction)
+```
+
+
+#### 3.2.2.1 Visualization of the Estimates 
+
+Erster Versuch 
+```{r}
+# Die Rundung ist hier das Problem, deswegen werden die Linien so krakelig. 
+Average_SE_interaction_estimation <- conditional_effects(fit_prediction_Score_SE_interaction01, "Test_Score:code") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 2))
+```
+
+```{r}
+# Kommt auf's gleiche raus
+Average_SE_interaction_estimation01<- conditional_effects(fit_prediction_Score_SE_interaction01, "Test_Score:code")$`Test_Score:code`
+```
+
+Diesen Plot nehmen! 
+```{r}
+Average_SE_interaction_estimation01 |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = code, 
+           fill = code)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion \ndistance to the mean", 
+                              "DI_RA" = "Dispersion range"))+
+  scale_fill_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion \ndistance to the mean", 
+                              "DI_RA" = "Dispersion range")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "statistical entities adressed on average ",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
+```{r}
+Average_SE_interaction_estimation01 |> 
+  ggplot(aes(x = Test_Score, 
+             y = estimate__, 
+             color = factor(code, 
+                            levels = c("DI_US", 
+                                       "DI_RA", 
+                                       "MD", 
+                                       "BM", 
+                                       "SK", 
+                                       "OL", 
+                                       "DI_DM")), 
+             fill = factor(code, 
+                           levels = c("DI_US", 
+                                      "DI_RA", 
+                                      "MD", 
+                                      "BM", 
+                                      "SK", 
+                                      "OL", 
+                                      "DI_DM")))) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  scale_fill_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Statistical entities adressed on average ",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    legend.key.height = unit(0.6, "cm"),  # Abstand zwischen den Legenden-Einträgen
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
+Nun mit anotate
+```{r}
+Average_SE_interaction_estimation01 |> 
+  ggplot(aes(x = Test_Score, 
+             y = estimate__, 
+             color = factor(code, 
+                            levels = c("DI_US", 
+                                       "DI_RA", 
+                                       "MD", 
+                                       "BM", 
+                                       "SK", 
+                                       "OL", 
+                                       "DI_DM")), 
+             fill = factor(code, 
+                           levels = c("DI_US", 
+                                      "DI_RA", 
+                                      "MD", 
+                                      "BM", 
+                                      "SK", 
+                                      "OL", 
+                                      "DI_DM")))) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  scale_fill_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Statistical entities adressed on average ",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    legend.key.height = unit(0.6, "cm"),  # Abstand zwischen den Legenden-Einträgen
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14)) +
+  geom_label(
+    aes(x = 0.5, y = 4.5, 
+        label = "Only positive\nassociation"),
+    fill = alpha("#cddf3c", 0.1),       # Selbe Farbe wie die Linie (Dispersion unspecific)
+    color = "black",        # Rahmenfarbe
+    fontface = "italic",    # Kursivschrift
+    size = 5,               # Schriftgröße
+    label.size = 0.5        # Dicke des Rahmens
+  ) +
+  annotate(
+    "segment", 
+    x = 0.62, xend = 0.85, 
+    y = 4.5, yend = 4.2,  
+    color = "black", size = 0.8, 
+    arrow = arrow(length = unit(0.2, "cm"))
+  )
+```
+
+```{r}
+
+
+quantification03 <- Average_SE_interaction_estimation01 %>%
+  group_by(code) %>%
+  summarise(
+    Start_Score = min(Test_Score),
+    Start_Value = estimate__[which.min(Test_Score)],   # Nur "estimate__" verwenden
+    Start_Lower = lower__[which.min(Test_Score)],     # Passende Spalte für unteren Wert
+    Start_Upper = upper__[which.min(Test_Score)],     # Passende Spalte für oberen Wert
+    End_Score = max(Test_Score),
+    End_Value = estimate__[which.max(Test_Score)],    # Nur "estimate__" verwenden
+    End_Lower = lower__[which.max(Test_Score)],       # Passende Spalte für unteren Wert
+    End_Upper = upper__[which.max(Test_Score)],       # Passende Spalte für oberen Wert
+    Max_Score = Test_Score[which.max(estimate__)],    # Test_Score beim maximalen "estimate__"
+    Max_Value = max(estimate__),                      # Maximaler "estimate__"
+    Max_Lower = lower__[which.max(estimate__)],       # Passender unterer Wert bei max. "estimate__"
+    Max_Upper = upper__[which.max(estimate__)]        # Passender oberer Wert bei max. "estimate__"
+  )
+
+print(quantification03)
+```
+
+
+Linien krauselig: Zweiter Versuch
+
+```{r}
+#Damit funktioniert es! 
+Average_SE_interaction_estimation01 |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = code, 
+           fill = code)) +
+  geom_line(size = 1.2) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.2, color = NA) +
+  labs(
+    x = "Test Score",
+    y = "GL_Values01",
+    color = "code",
+    fill = "code"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    text = element_text(size = 14)
+  )
+```
+
+
+
+```{r}
+ggplot(, aes(x = Test_Score, y = estimate__, color = code, fill = code)) +
+  geom_line(size = 1) +                        # Linien
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.2) + # Unsicherheitsband
+  labs(x = "Test Score", y = "Predicted Count (n)", 
+       color = "Code Levels", fill = "Code Levels") +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+
+
+
+## 3.3 *Research Question 3*: Is there an association between teachers' general graph literacy (measured by a test score) and their actual graph reading performance (measured by the highest graph literacy level) (RQ 3). 
+
+TA_D = Think-Aloud duration; 
+INT = Interruption;
+Lvl_01 = graph literacy level 1 (*reading the data*);
+Lvl_02 = graph literacy level 2 (*reading between the data*);
+Lvl_03 = graph literacy level 3 (*reading beyond the data*)
+
+```{r}
+GL_Data <- read_excel("Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
+glimpse(GL_Data)
+skim(GL_Data)
+```
+
+
+### 3.3.1 Visualization of proportions of the Graph literacy levels per think-aloud 
+
+#### 3.3.1.1 Data wrangling 
+
+Transform the event data to intervall data (with 1 second intervall)
+```{r}
+GL_Intervall <- GL_Data |> 
+  mutate(time = map2(start, end, seq, by = "1 sec")) |> 
+  unnest(cols = time) |> 
+  select(-start, -end) |> # -turnID wurde entfernt ...
+  group_by(time, PID) |> 
+  summarise(code = toString(code)) |> 
+  ungroup() |> 
+  splitstackshape::cSplit_e("code", sep = ",", type = "character", drop = F, fill = 0) |> 
+  as_tibble() |> 
+  arrange(PID)  
+```
+
+Calculating the relative duration of Graph literacy levels
+```{r}
+GL_RelativeDuration <- GL_Intervall |> 
+  mutate(Lvl_1 = ifelse(code_Lvl_01 == 1 & code_INT == 0, 1, 0), 
+         Lvl_2 = ifelse(code_Lvl_02 == 1 & code_INT == 0, 1, 0), 
+         Lvl_3 = ifelse(code_Lvl_03 == 1 & code_INT == 0, 1, 0), 
+         TA_D_clean = ifelse(code_TA_D == 1 & code_INT == 0, 1, 0)) |> 
+  group_by(PID) |> 
+  summarize(think_aloud_duration = sum(TA_D_clean),
+            Lvl_01_duration = sum(Lvl_1)/think_aloud_duration*100,
+            Lvl_02_duration = sum(Lvl_2)/think_aloud_duration*100,
+            Lvl_03_duration = sum(Lvl_3)/think_aloud_duration*100) |>
+  ungroup()
+```
+
+```{r}
+GL_long_RelativeDuration <- GL_RelativeDuration |>  
+  pivot_longer(cols=c("Lvl_01_duration", "Lvl_02_duration", "Lvl_03_duration"),
+                    names_to = "GL_Levels",
+                    values_to ='GL_Values') 
+```
+
+
+#### 3.3.1.2 Visualizations 
+
+##### 3.3.1.2.1 Stacked bar plot 
+
+```{r}
+GL_long_RelativeDuration <- GL_long_RelativeDuration |>  
+  group_by(PID) |> 
+  mutate(L3_Values = ifelse(GL_Levels == "Lvl_03_duration", GL_Values, NA)) |> 
+  mutate(L2_Values = ifelse(GL_Levels == "Lvl_02_duration", GL_Values, NA)) |> 
+  ungroup()  |>   
+  mutate(GL_Values01 = GL_Values/max(GL_Values))  |>  
+  mutate(GL_Values02 = GL_Values/100)  |>  
+  full_join(Test_Graph_Literacy)
+```
+
+```{r}
+GL_long_RelativeDuration |>  
+  mutate(PID = ordered(PID),
+         PID = fct_reorder(PID, L2_Values),
+         PID = fct_reorder(PID, L3_Values)) |> 
+  ggplot(aes(x = PID, 
+             y = GL_Values, 
+             fill = GL_Levels)) +
+  geom_bar(position="stack", stat="identity") +
+  labs(title = "Graph Literacy Levels per Teacher", 
+       fill = "Graph Literacy Levels") + 
+  ylab("Graph Literacy Values in %") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "right", 
+        legend.justification = "center", 
+        legend.direction = "vertical", 
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10)) +
+  
+  scale_fill_manual(
+    labels=c('Reading the Data', 
+             'Reading between \nthe Data', 
+             'Reading beyond\nthe Data'),
+    values = # For individual coloring
+      c("Lvl_01_duration" = "#30688e",
+        "Lvl_02_duration" = "#20a486", 
+        "Lvl_03_duration" = "#481f70")) +
+
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_text(face = "bold", 
+                           size = 10, angle = 45))
+```
+
+
+##### 3.3.1.2.2  Sequence Plots of relative think-aloud duration
+
+```{r}
+Noch raussuchen 
+```
+
+
+
+##### 3.3.1.2.3  Raincloud Box-Plot
+```{r}
+GL_long_RelativeDuration |>  
+  ggplot(aes(x=factor(GL_Levels, 
+             level=c("Lvl_01_duration", 
+                     "Lvl_02_duration", 
+                     "Lvl_03_duration")),
+             y=GL_Values,
+             fill = GL_Levels)) +
+  stat_halfeye(adjust = 0.5, 
+                       width = 0.5, 
+                       .width = 0, 
+                       alpha =0.5,
+                       justification = -.3, 
+                       point_colour = NA,
+                       show.legend = FALSE) + 
+    geom_boxplot(aes(fill = GL_Levels), 
+                 show.legend = FALSE,
+                 alpha = 0.2, # lower opacity 
+                 outlier.shape = NA,
+                 width = 0.18) +
+    scale_fill_manual(values = # For individual coloring
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    geom_half_point(aes(color = GL_Levels), 
+                            show.legend = FALSE,
+                            side = "l", 
+                            range_scale = 0.3, 
+                            width = 1,
+                            alpha = 1,
+                            size = 0.5) + 
+    scale_color_manual(values = 
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    stat_summary(
+      geom = "text",
+      fun = "mean",
+      aes(label = round(..y.., 1), color = GL_Levels),
+      fontface = "bold",
+      size = 6,
+      vjust = - 2.5,
+      hjust = 1.6) +
+    coord_flip() +
+    ggtitle("Distribution of Graph Literacy Levels") +
+    theme_minimal() + 
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          axis.text.y = element_text(size = 15),
+          legend.position = "none") + 
+    scale_x_discrete(labels = c("Reading\nthe Data",
+                                "Reading\nbetween\nthe Data",
+                                "Reading\nbeyond\nthe Data"
+                                )) +
+    xlab("") +
+    ylab("Percentage per teacher") 
+```
+
+
+
+### 3.3.2 Correlation between Test Score and GL-Level 
+
+```{r}
+GL_long_RelativeDuration %>% 
+  ggplot(aes(GL_Values, fill = GL_Levels)) +
+  geom_density(alpha = .5) +
+  theme_minimal()
+```
+
+```{r}
+######### Modell 0: Auswirkung v. GL_Levels auf relative Dauer ######### 
+fit_prediction_Score_RelativeDuration00 <- 
+  brm(bf(GL_Values01 ~ GL_Levels + (1|PID),
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels),
+      data = GL_long_RelativeDuration %>% filter(!is.na(Test_Score)),
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+
+# Posterior Predictive Checks 
+## Wie gut passt die "Dichte der tatsächlichen Daten" zu künstlichen Modellierungen dieser Daten?
+
+pp_check(fit_prediction_Score_RelativeDuration00)
+pp_check(fit_prediction_Score_RelativeDuration00, type = "hist")
+pp_check(fit_prediction_Score_RelativeDuration00, type = "ecdf_overlay")
+pp_check(fit_prediction_Score_RelativeDuration00, type = "violin_grouped", group = "GL_Levels")
+
+
+# Bedingte Effekte für Modell 00 berechnen 
+conditional_effects(fit_prediction_Score_RelativeDuration00) [[1]]
+
+plot(conditional_effects(fit_prediction_Score_RelativeDuration00))
+
+
+################# Posterior Predictive Checks ########################
+
+#### Modell 1: Interaktion zw. GL_Levels und Test_Score auf relative Dauer #####
+## Nun wurde der Test-Score miteinbezogen: Es wird untersucht, inwieweit der Score sich zusammen mit den GL_Values auf GL_Values01 auswirkt
+
+fit_prediction_Score_RelativeDuration01 <- 
+  brm(bf(GL_Values01 ~ GL_Levels * Test_Score + (1|PID), 
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels * Test_Score),
+      data = GL_long_RelativeDuration,
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+pp_check(fit_prediction_Score_RelativeDuration01)
+pp_check(fit_prediction_Score_RelativeDuration01, type = "violin_grouped", group = "GL_Levels")
+
+
+# Bedingte Effekte für Modell 01 berechnen 
+conditional_effects(fit_prediction_Score_RelativeDuration01) [[1]]
+
+plot(conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels"))
+
+# Ergebnis: Unterscheidet sich kaum von den Ergebnissen des ersten Modells (welches den Test_Score nicht mitberücksichtigt hatte)
+
+loo_compare(
+  add_criterion(fit_prediction_Score_RelativeDuration00, "loo"),
+  add_criterion(fit_prediction_Score_RelativeDuration01, "loo")
+  )
+
+# Tabellarische Gegenüberstellung beider Modelle 
+sjPlot::tab_model(fit_prediction_Score_RelativeDuration00, fit_prediction_Score_RelativeDuration01)
+```
+
+```{r}
+# Neues Modell mit GL_Values02
+fit_prediction_Score_RelativeDuration02 <- 
+  brm(bf(GL_Values02 ~ GL_Levels * Test_Score + (1|PID), 
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels * Test_Score),
+      data = GL_long_RelativeDuration,
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+pp_check(fit_prediction_Score_RelativeDuration02)
+pp_check(fit_prediction_Score_RelativeDuration02, type = "violin_grouped", group = "GL_Levels")
+
+conditional_effects(fit_prediction_Score_RelativeDuration02, "Test_Score:GL_Levels") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+
+plot_data1 <- conditional_effects(fit_prediction_Score_RelativeDuration02, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+# Daten plotten
+plot_data1 |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = GL_Levels, 
+           fill = GL_Levels)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                       c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                     labels = c("Lvl_01_duration" = "Reading the data",
+                                "Lvl_02_duration" = "Reading between \nthe data", 
+                                "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  scale_fill_manual(values = 
+                      c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                    labels = c("Lvl_01_duration" = "Reading the data",
+                               "Lvl_02_duration" = "Reading between \nthe data", 
+                               "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Relative duration of the graph literacy levels (scaled)",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+
+
+
+effects_data02 <- conditional_effects(fit_prediction_Score_RelativeDuration02, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+# Extrahierte Daten
+quantification02 <- effects_data02 %>%
+  group_by(GL_Levels) %>%
+  summarise(
+    Start_Score = min(Test_Score),
+    Start_Value = estimate__[which.min(Test_Score)],   # Nur "estimate__" verwenden
+    Start_Lower = lower__[which.min(Test_Score)],     # Passende Spalte für unteren Wert
+    Start_Upper = upper__[which.min(Test_Score)],     # Passende Spalte für oberen Wert
+    End_Score = max(Test_Score),
+    End_Value = estimate__[which.max(Test_Score)],    # Nur "estimate__" verwenden
+    End_Lower = lower__[which.max(Test_Score)],       # Passende Spalte für unteren Wert
+    End_Upper = upper__[which.max(Test_Score)],       # Passende Spalte für oberen Wert
+    Max_Score = Test_Score[which.max(estimate__)],    # Test_Score beim maximalen "estimate__"
+    Max_Value = max(estimate__),                      # Maximaler "estimate__"
+    Max_Lower = lower__[which.max(estimate__)],       # Passender unterer Wert bei max. "estimate__"
+    Max_Upper = upper__[which.max(estimate__)]        # Passender oberer Wert bei max. "estimate__"
+  )
+
+print(quantification02)
+```
+
+
+#### 3.3.2.1 Extracting data from the conditional effects
+
+```{r}
+conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+
+plot(conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels"))
+
+effects_data <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+
+# Extrahierte Daten
+
+quantification <- effects_data %>%
+  group_by(GL_Levels) %>%
+  summarise(
+    Start_Score = min(Test_Score),
+    Start_Value = estimate__[which.min(Test_Score)],   # Nur "estimate__" verwenden
+    Start_Lower = lower__[which.min(Test_Score)],     # Passende Spalte für unteren Wert
+    Start_Upper = upper__[which.min(Test_Score)],     # Passende Spalte für oberen Wert
+    End_Score = max(Test_Score),
+    End_Value = estimate__[which.max(Test_Score)],    # Nur "estimate__" verwenden
+    End_Lower = lower__[which.max(Test_Score)],       # Passende Spalte für unteren Wert
+    End_Upper = upper__[which.max(Test_Score)],       # Passende Spalte für oberen Wert
+    Max_Score = Test_Score[which.max(estimate__)],    # Test_Score beim maximalen "estimate__"
+    Max_Value = max(estimate__),                      # Maximaler "estimate__"
+    Max_Lower = lower__[which.max(estimate__)],       # Passender unterer Wert bei max. "estimate__"
+    Max_Upper = upper__[which.max(estimate__)]        # Passender oberer Wert bei max. "estimate__"
+  )
+
+
+
+print(quantification02)
+
+# Filtere die Werte für Lvl_01_duration bei Test_Score = 1
+effects_data %>% filter(GL_Levels == "Lvl_01_duration" & Test_Score == 1)
+
+```
+
+
+#### 3.3.2.2 Visualizing the correlation between graph literacy and graph reading performance
+
+```{r}
+plot_data <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+plot_data |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = GL_Levels, 
+           fill = GL_Levels)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                       c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                     labels = c("Lvl_01_duration" = "Reading the data",
+                                "Lvl_02_duration" = "Reading between \nthe data", 
+                                "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  scale_fill_manual(values = 
+                      c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                    labels = c("Lvl_01_duration" = "Reading the data",
+                               "Lvl_02_duration" = "Reading between \nthe data", 
+                               "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Relative duration of the graph literacy levels (scaled)",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
+
+
+
+
+
+
+

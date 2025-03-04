@@ -10,8 +10,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-# 0. Version and Packages 
+# 0. Version and Packages
 
 ```{r}
 # Get R version
@@ -63,7 +62,6 @@ library(writexl)
 library(gt)
 ```
 
-
 # 1. Demographics PDW
 
 ```{r}
@@ -80,14 +78,15 @@ Demographics_PDW <- Demographics_PDW |>
 write_xlsx(Demographics_PDW, "Data/TPOD_Demographics.xlsx")
 ```
 
+# 2. Statistical Entities PDW
 
-# 2. Statistical Entities PDW  
 ```{r}
 # Import statistical entities (SE) data set 
 SE_PDW <- read_excel("Data/pre_Consensus_Statistical_Entities.xlsx")
 ```
 
 ## 2.1 Change time format and Rounding
+
 ```{r}
 # Streamline data set and round start and end times 
 SE_PDW <- SE_PDW |>
@@ -113,7 +112,8 @@ SE_PDW <- SE_PDW |>
   # Even with an if_else the error message still remains!  
 ```
 
-## 2.2 Solve Passee Problem 
+## 2.2 Solve Passee Problem
+
 ```{r}
 # Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
 
@@ -159,7 +159,8 @@ SE_Completed_PDW <- SE_PDW %>%
   arrange(PID) # Rearrange 
 ```
 
-## 2.3 Rename Variables 
+## 2.3 Rename Variables
+
 ```{r}
 # Rename "AE" and the statistical entities
 SE_Completed_PDW <- SE_Completed_PDW |> 
@@ -177,8 +178,8 @@ SE_Completed_PDW <- SE_Completed_PDW |>
 write_xlsx(SE_Completed_PDW, "Data/TPOD_Consensus_Statistical_Entities.xlsx")
 ```
 
+# 3. Test score PDW
 
-# 3. Test score PDW 
 ```{r}
 Test_score_PDW <- read.csv("Data/pre_Test_Score_Graph_Literacy.csv")
 
@@ -191,15 +192,15 @@ Test_score_PDW <- Test_score_PDW |>
 write_xlsx(Test_score_PDW, "Data/TPOD_Test_Score_Graph_Literacy.xlsx")
 ```
 
-
 # 4. Graph Literacy Levels PDW
- 
+
 ```{r}
 # Import statistical entities (SE) data set 
 GL_PDW <- read_excel("Data/pre_Consensus_Graph_Literacy_Levels.xlsx")
 ```
 
 ## 4.1 Change time format and Rounding
+
 ```{r}
 # Streamline data set and round start and end times 
 GL_PDW <- GL_PDW |>
@@ -221,7 +222,8 @@ GL_PDW <- GL_PDW |>
   # Even with an if_else the error message still remains!  
 ```
 
-## 4.2 Solve Passee Problem 
+## 4.2 Solve Passee Problem
+
 ```{r}
 # Merge "Passee" and "Passee2": Due to a technical error, the recording of "Passee" had to be interrupted, thus resulting in two seperate recordings of the same person. 
 
@@ -268,6 +270,7 @@ GL_Completed_PDW <- GL_PDW %>%
 ```
 
 4.3 Rename Variables
+
 ```{r}
 # Rename "AE" and the statistical entities
 GL_Completed_PDW <- GL_Completed_PDW |> 
@@ -282,13 +285,14 @@ GL_Completed_PDW <- GL_Completed_PDW |>
 write_xlsx(GL_Completed_PDW, "Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
 ```
 
-# 5. Saving the Output 
+# 5. Saving the Output
 
-> Here all plots and tables from the three Research Questions are saved. 
+> Here all plots and tables from the three Research Questions are saved.
 
 ## 5.1 Research Question 1
 
 ### 5.1.1 Total Amount of SE Bar-Plot
+
 ```{r}
 # Saving
 ggsave("Plots/1.1 Amount_Plot (RQ 1).jpg",  
@@ -298,6 +302,7 @@ dpi = 700)
 ```
 
 ### 5.1.2 Percentages of SE Bar-Plot
+
 ```{r}
 # Saving
 ggsave("Plots/1.2 Percent_Plot (RQ 1).jpg",  
@@ -307,6 +312,7 @@ dpi = 700)
 ```
 
 ### 5.1.3 Individual Teachers noticing SE Small Multiples Bar-Plots
+
 ```{r}
 # Saving
 ggsave("Plots/1.3 Individual_Plot (RQ 1).jpg",  
@@ -315,7 +321,8 @@ height = 13, # 40 too high, between 10 and 20
 dpi = 700)
 ```
 
-### 5.1.4 SE Sequence-Plot  
+### 5.1.4 SE Sequence-Plot
+
 ```{r}
 # Saving
 ggsave("Plots/1.4 Sequence_Plot (RQ 1).jpg",  
@@ -324,8 +331,7 @@ height = 14, # 40 too high, between 10 and 20
 dpi = 700)
 ```
 
-
-### 5.1.5 Average SE noticed by Teachers 
+### 5.1.5 Average SE noticed by Teachers
 
 ```{r}
 # Using the gt() function for the HTML Output 
@@ -346,7 +352,6 @@ height = 10, # 40 too high, between 10 and 20
 dpi = 700)
 ```
 
-
 ## 5.2 Research Question 2
 
 ```{r}
@@ -359,7 +364,6 @@ hypothesis |>
   gtsave("Plots/2.1 SE_conditional_effects (RQ 2).html")  # Save as HTML
 ```
 
-
 ```{r}
 # Saving
 ggsave("Plots/2.2 Incidence_Rate_Ratios (RQ 2).jpg",  
@@ -368,8 +372,7 @@ height = 14, # 40 too high, between 10 and 20
 dpi = 700)
 ```
 
-
-## 5.3 Research Qustion 3 
+## 5.3 Research Qustion 3
 
 ```{r}
 # Saving
@@ -378,7 +381,6 @@ width = 10, # 30 too high, between 10 and 20
 height = 6, # 40 too high, between 10 and 20
 dpi = 700)
 ```
-
 
 ```{r}
 # Saving

@@ -1,0 +1,757 @@
+---
+title: "How do teachers read and interpret artificial mid-term grades and how is this connected to their graph literacy?"
+format: 
+    html:
+        toc: true
+        toc-title: Contents
+        toc-location: left
+        self-contained: true
+        theme: flatly
+lang: "eng"
+editor_options: 
+  chunk_output_type: console
+lightbox: true
+---
+
+```{r, message=FALSE, warning=FALSE}
+library(readxl)
+library(tidyverse)
+library(skimr)
+library(psych)
+library(brms)
+library(scales)
+library(ggplot2)
+library(gghalves)
+library(ggdist)
+
+options(mc.cores=parallel::detectCores())
+set.seed(2258852)
+```
+
+# **1. Demographics**
+
+```{r}
+demographics <- read_xlsx("data/TPOD_Demographics.xlsx")
+glimpse(demographics)
+skim(demographics)
+```
+
+## 1.1 Gender
+
+```{r}
+demographics |> 
+group_by(sex) |> 
+ summarise(gender_count = n(),
+           gender_Per = gender_count / 47 * 100) 
+```
+
+## 1.2 Age
+
+```{r}
+describe(as.numeric(demographics$age))
+```
+
+## 1.3 Teaching Experience
+
+```{r}
+describe(as.numeric(demographics$exp))
+```
+
+## 1.4 Education level
+
+::: callout-note
+p = primary education, s = secondary education
+:::
+
+```{r}
+demographics |> 
+group_by(prim_sec) |> 
+ summarise(edlevel_count = n(),
+           edlevel_Per = edlevel_count / 47 * 100)
+```
+
+# **2. Inter-Rater Reliability Coding**
+
+# **3. Research Question 1**
+
+> Which statistical entities have been addressed by teachers while reading and interpreting artificial mid-term grades?
+
+::: callout-note
+-   TA_D = Think-Aloud duration
+-   OL = Outliers
+-   BM = Bimodality
+-   MD = Mean difference
+-   SK = Skewness;
+-   DI_US = Dispersion unspecific
+-   DI_DM = Dispersion Distance to the mean
+-   DI_RA = Dispersion range
+:::
+
+```{r}
+# Import statistical entities (SE) data set 
+SE_Data <- read_excel("Data/TPOD_Consensus_Statistical_Entities.xlsx")
+glimpse(SE_Data)
+skim(SE_Data)
+```
+
+## 3.1 Visualizations of total SE amount
+
+::: callout-note
+SE = statistical entities
+:::
+
+```{r}
+# Create a new DS with the SE (remove TA_D)
+SE_Amount <- SE_Data |> 
+  filter(code != "TA_D") 
+
+SE_Amount |> 
+  ggplot(aes(x = factor(code, 
+             level=c("OL", 
+                     "BM", 
+                     "MD", 
+                     "SK", 
+                     "DI_US",
+                     "DI_DM",
+                     "DI_RA")),
+              fill = code)) +
+  geom_bar(aes(fill = code), 
+           show.legend = FALSE) + 
+  geom_text(
+     aes(label=after_stat(count)),
+     stat='count',
+     nudge_y = 5,
+     fontface = "bold",
+     size = 6) +
+    scale_fill_manual(values = 
+                         c("OL" = "#462268",
+                           "BM" ="#29788d",
+                           "MD"= "#22a784", 
+                           "SK" = "#6dc95d",
+                           "DI_US" = "#cddf3c",
+                           "DI_DM" = "#8a8000",
+                           "DI_RA" = "#FFA500")) +
+  ggtitle("Total amount of Statistical Entities") +
+    theme_minimal() +
+    theme(axis.title.x = element_text(size = 15),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none") + 
+    scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion \ndistance to the mean", 
+                                "DI_RA" = "Dispersion \nrange")) +
+    xlab("") +
+    ylab("Amount") 
+```
+
+## 3.2 Visualisation of percentages of teachers noticing SE at least once
+
+```{r}
+SE_Percent <- SE_Amount |> 
+  group_by(code) |> 
+  summarize(Noticed_Entities = n_distinct(PID)) |> 
+  mutate(percentage = (Noticed_Entities / 48) * 100)
+
+
+SE_Percent |>
+  ggplot(aes(x = factor(code, 
+             level=c("DI_DM",
+                     "OL",
+                     "SK",
+                     "BM", 
+                     "MD", 
+                     "DI_RA",
+                     "DI_US")),
+             y = Noticed_Entities,
+             fill = code)) +
+  geom_bar(stat = "identity") +
+  geom_text(
+    aes(label = paste(Noticed_Entities,
+                      "(",sprintf("%.1f%%", percentage),")")),
+    vjust = -0.5, 
+    color = "black",
+    size = 6,
+    fontface = "bold") +
+  scale_fill_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c")) +
+  ggtitle("Statistical Entities Percentage") +
+    theme_minimal() + 
+    theme(
+          axis.title.x = element_text(size = 15),
+          axis.text.x = element_text(size = 14),
+          axis.text.y = element_text(size = 14),
+          legend.position = "none") +  
+    scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion \ndistance to the mean", 
+                                "DI_RA" = "Dispersion \nrange")) +
+    xlab("") + 
+    ylab("Amount") 
+```
+
+## 3.3 Visualizations of total SE amount for each teacher individually
+
+```{r}
+# Group_by Teacher and then count the amount of the SE. For that, a separate object, that addresses the *individual* amounts,is created. 
+SE_Individual <- SE_Amount |>
+  group_by(PID) |> 
+  count(code) |> 
+  rename(Amount = n)
+
+SE_Individual |>
+  ggplot(aes(x = factor(code, 
+                 level=c("OL", "BM","MD", "SK", "DI_US", "DI_DM", "DI_RA")),       
+             y = Amount,
+             fill = code)) +
+  geom_bar(stat="identity") +
+    scale_fill_manual(values = 
+                         c("OL" = "#462268",
+                           "BM" ="#29788d",
+                           "MD"= "#22a784", 
+                           "SK" = "#6dc95d",
+                           "DI_US" = "#cddf3c",
+                           "DI_DM" = "#8a8000",
+                           "DI_RA" = "#FFA500")) +
+  geom_text(aes(label = Amount), vjust = -0.3, size = 3) +
+  scale_y_continuous(limits = c(0, 10), 
+                     breaks = seq(0, 10, by = 2)) +
+  facet_wrap(~PID, ncol = 6) +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_blank(),
+          axis.text.x = element_text(
+            size = 8, 
+            angle = 90,
+            hjust = 1,              
+            vjust = 0.5,            
+            margin = margin(t = 5),
+            lineheight = 0.8),
+          axis.text.y = element_text(size = 10),
+          legend.position = "none") + 
+   scale_x_discrete(labels = c("OL" = "Outliers",
+                                "BM" = "Bimodality", 
+                                "MD" = "Mean difference", 
+                                "SK" = "Skewness",
+                                "DI_US" = "Dispersion \nunspecific", 
+                                "DI_DM" = "Dispersion distance \nto mean", 
+                                "DI_RA" = "Dispersion range")) +
+    xlab("") + 
+    ylab("Amount") 
+```
+
+## 3.4 Bayesian poisson regression analysis for average SE per teacher
+
+### 3.4.1 Create count data
+
+```{r}
+# Summarize count of SE per teacher 
+SE_Count <- SE_Amount |>  
+  group_by(code, PID) |> 
+  summarize(n = n()) |>  
+  ungroup() |> 
+  full_join(expand_grid(code = unique(SE_Amount$code), PID = unique(SE_Amount$PID))) |> 
+  mutate(n = ifelse(is.na(n), 0, n))
+
+# Check distribution
+SE_Count |>
+  ggplot(aes(x = n)) +
+  geom_histogram() +
+  facet_wrap(~code)
+```
+
+### 3.4.2 Fit bayesian poisson regression model
+
+```{r}
+fit_intercept01 <- brm(n ~ code + (1|PID),
+                       data = SE_Count,
+                       family = poisson(),
+                       cores = 4,
+                       save_pars = save_pars(all = TRUE),
+                       seed = 2258852)
+                       
+summary(fit_intercept01)
+
+plot(fit_intercept01)
+
+pp_check(fit_intercept01, type = "bars")
+
+conditional_effects(fit_intercept01)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+```
+
+### 3.4.3 Estimate and visualize the average SE per Teacher
+
+```{r}
+Average_SE_estimation <- conditional_effects(fit_intercept01)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+
+Average_SE_estimation |> 
+ggplot(aes(x = estimate__, y = factor(code, 
+             level=c("DI_US",
+                     "DI_RA",
+                     "MD",
+                     "BM", 
+                     "SK", 
+                     "OL",
+                     "DI_DM")),
+  color = code)) + 
+  geom_point(size = 5) + 
+  geom_errorbar(aes(xmin = lower__, xmax = upper__), linewidth = 1, width = 0.0) + 
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c")) +
+  ggtitle("Conditional effects for the statistical entities") +
+  scale_y_discrete(labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion\nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+ 
+  scale_x_continuous(breaks = seq(0, 4.1, by = 0.5)) +
+  geom_text(aes(label = round(estimate__, 1)), 
+            vjust = -1.5, 
+            size = 4, 
+            fontface = "bold") +
+  xlab("") + 
+  ylab("") +
+  theme_minimal()+
+   theme(
+    axis.title.x = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 15, face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16)) +  
+  theme(legend.position = "none")
+```
+
+# **4. Research Question 2**
+
+> Is there an association between teachers' general graph literacy (measured by a test score) and their ability to recognize said statistical entities?
+
+```{r}
+Test_Graph_Literacy <- read_xlsx("Data/TPOD_Test_Score_Graph_Literacy.xlsx")
+glimpse(Test_Graph_Literacy)
+skim(Test_Graph_Literacy)
+```
+
+## 4.1 Fit bayesian poisson regression model with `Test_Score` as a predictor with interaction
+
+```{r}
+fit_prediction_Score_SE_interaction01 <- 
+  brm(n ~ code * Test_Score + (1|PID), 
+      data = SE_Count |> 
+        full_join(Test_Graph_Literacy),
+      family = poisson(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 2258852)
+
+summary(fit_prediction_Score_SE_interaction01)
+
+plot(fit_prediction_Score_SE_interaction01)
+
+pp_check(fit_prediction_Score_SE_interaction01, type = "bars")
+
+conditional_effects(fit_prediction_Score_SE_interaction01) [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+```
+
+## 4.2 Estimate and visualize the association between the test score and the average SE
+
+```{r}
+Average_SE_interaction_estimation01<-
+  conditional_effects(fit_prediction_Score_SE_interaction01,
+                      "Test_Score:code")$`Test_Score:code`
+
+
+Average_SE_interaction_estimation01 |> 
+  ggplot(aes(x = Test_Score, 
+             y = estimate__, 
+             color = factor(code, 
+                            levels = c("DI_US", 
+                                       "DI_RA", 
+                                       "MD", 
+                                       "BM", 
+                                       "SK", 
+                                       "OL", 
+                                       "DI_DM")), 
+             fill = factor(code, 
+                           levels = c("DI_US", 
+                                      "DI_RA", 
+                                      "MD", 
+                                      "BM", 
+                                      "SK", 
+                                      "OL", 
+                                      "DI_DM")))) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  scale_fill_manual(values = 
+                         c("DI_DM" = "#8a8000",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#FFA500",
+                           "DI_US" = "#cddf3c"),
+                     labels = c("OL" = "Outlier",
+                              "BM" = "Bimodality", 
+                              "MD" = "Mean Difference", 
+                              "SK" = "Skewness",
+                              "DI_US" = "Dispersion \nunspecific", 
+                              "DI_DM" = "Dispersion average\ndistance to mean", 
+                              "DI_RA" = "Dispersion range")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Statistical entities adressed on average ",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    legend.key.height = unit(0.6, "cm"), 
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14)) +
+  geom_label(
+    x = 0.5, y = 4.5, 
+    label = "Only positive\nassociation",
+    fill = alpha("#cddf3c", 0.1),       
+    color = "black",       
+    fontface = "italic",   
+    size = 5,               
+    label.size = 0.5        
+  ) +
+  annotate(
+    "segment", 
+    x = 0.62, xend = 0.85, 
+    y = 4.5, yend = 4.2,  
+    color = "black", linewidth = 0.8, 
+    arrow = arrow(length = unit(0.2, "cm"))
+  )
+```
+
+## 4.3 Display of the values of the lines and their credibility intervalls
+
+```{r}
+quantification_of_RQ2 <- Average_SE_interaction_estimation01 |> 
+  group_by(code) |> 
+  summarise(
+    Start_Score = min(Test_Score),
+    Start_Value = estimate__[which.min(Test_Score)],   
+    Start_Lower = lower__[which.min(Test_Score)],     
+    Start_Upper = upper__[which.min(Test_Score)],     
+    End_Score = max(Test_Score),
+    End_Value = estimate__[which.max(Test_Score)],    
+    End_Lower = lower__[which.max(Test_Score)],      
+    End_Upper = upper__[which.max(Test_Score)],       
+    Max_Score = Test_Score[which.max(estimate__)],    
+    Max_Value = max(estimate__),                      
+    Max_Lower = lower__[which.max(estimate__)],      
+    Max_Upper = upper__[which.max(estimate__)]        
+  )
+
+print(quantification_of_RQ2, width = Inf)
+```
+
+# **5. Research Question 3**
+
+> Is there an association between teachers' general graph literacy (measured by a test score) and their actual graph reading performance (measured by the highest graph literacy level) (RQ 3).
+
+::: callout-note
+-   TA_D = Think-Aloud duration
+
+-   INT = Interruption
+
+-   Lvl_01 = graph literacy level 1 (*reading the data*)
+
+-   Lvl_02 = graph literacy level 2 (*reading between the data*)
+
+-   Lvl_03 = graph literacy level 3 (*reading beyond the data*)
+:::
+
+```{r}
+GL_Data <- read_excel("Data/TPOD_Consensus_Graph_Literacy_Levels.xlsx")
+glimpse(GL_Data)
+skim(GL_Data)
+```
+
+## 5.1 Visualizations of proportions of the Graph literacy levels per think-aloud
+
+Transforming the event data to intervall data (with 1 second intervall)
+
+```{r}
+GL_Intervall <- GL_Data |> 
+  mutate(time = map2(start, end, seq, by = "1 sec")) |> 
+  unnest(cols = time) |> 
+  select(-start, -end) |> 
+  group_by(time, PID) |> 
+  summarise(code = toString(code)) |> 
+  ungroup() |> 
+  splitstackshape::cSplit_e("code", sep = ",", type = "character", drop = F, fill = 0) |> 
+  as_tibble() |> 
+  arrange(PID)  
+```
+
+Calculating the relative duration of Graph literacy levels
+
+```{r}
+GL_RelativeDuration <- GL_Intervall |> 
+  mutate(Lvl_1 = ifelse(code_Lvl_01 == 1 & code_INT == 0, 1, 0), 
+         Lvl_2 = ifelse(code_Lvl_02 == 1 & code_INT == 0, 1, 0), 
+         Lvl_3 = ifelse(code_Lvl_03 == 1 & code_INT == 0, 1, 0), 
+         TA_D_clean = ifelse(code_TA_D == 1 & code_INT == 0, 1, 0)) |> 
+  group_by(PID) |> 
+  summarize(think_aloud_duration = sum(TA_D_clean),
+            Lvl_01_duration = sum(Lvl_1)/think_aloud_duration*100,
+            Lvl_02_duration = sum(Lvl_2)/think_aloud_duration*100,
+            Lvl_03_duration = sum(Lvl_3)/think_aloud_duration*100) |>
+  ungroup()
+```
+
+Reshaping the data set into a long format
+
+```{r}
+GL_long_RelativeDuration <- 
+  GL_RelativeDuration |>  
+  pivot_longer(cols=c("Lvl_01_duration", 
+                      "Lvl_02_duration", 
+                      "Lvl_03_duration"),
+               names_to = "GL_Levels",
+               values_to ='GL_Values') 
+```
+
+Calculating scaled Graph Literacy values
+
+```{r}
+GL_long_RelativeDuration <- GL_long_RelativeDuration |>  
+  group_by(PID) |> 
+  mutate(L3_Values = ifelse(GL_Levels == "Lvl_03_duration", GL_Values, NA)) |> 
+  mutate(L2_Values = ifelse(GL_Levels == "Lvl_02_duration", GL_Values, NA)) |> 
+  ungroup()  |>   
+  mutate(GL_Values01 = GL_Values/max(GL_Values))  |>  
+  mutate(GL_Values02 = GL_Values/100)  |>  
+  full_join(Test_Graph_Literacy)
+```
+
+### 5.1.1 Visualization of Graph Literacy Values per Teacher
+
+```{r}
+GL_long_RelativeDuration |>  
+  mutate(PID = ordered(PID),
+         PID = fct_reorder(PID, L2_Values),
+         PID = fct_reorder(PID, L3_Values)) |> 
+  ggplot(aes(x = PID, 
+             y = GL_Values, 
+             fill = GL_Levels)) +
+  geom_bar(position="stack", stat="identity") +
+  labs(title = "Graph Literacy Levels per Teacher", 
+       fill = "Graph Literacy Levels") + 
+  ylab("Graph Literacy Values in %") +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(legend.position = "right", 
+        legend.justification = "center", 
+        legend.direction = "vertical", 
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 10)) +
+  scale_fill_manual(
+    labels=c('Reading the Data', 
+             'Reading between \nthe Data', 
+             'Reading beyond\nthe Data'),
+    values = 
+      c("Lvl_01_duration" = "#30688e",
+        "Lvl_02_duration" = "#20a486", 
+        "Lvl_03_duration" = "#481f70")) +
+
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_text(face = "bold", 
+                           size = 10, angle = 45))
+```
+
+### 5.1.2 Vizualization of total Graph Literacy Percentages
+
+```{r}
+GL_long_RelativeDuration |>  
+  ggplot(aes(x=factor(GL_Levels, 
+             level=c("Lvl_01_duration", 
+                     "Lvl_02_duration", 
+                     "Lvl_03_duration")),
+             y=GL_Values,
+             fill = GL_Levels)) +
+  stat_halfeye(adjust = 0.5, 
+                       width = 0.5, 
+                       .width = 0, 
+                       alpha =0.5,
+                       justification = -.3, 
+                       point_colour = NA,
+                       show.legend = FALSE) + 
+    geom_boxplot(aes(fill = GL_Levels), 
+                 show.legend = FALSE,
+                 alpha = 0.2,
+                 outlier.shape = NA,
+                 width = 0.18) +
+    scale_fill_manual(values = 
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    geom_half_point(aes(color = GL_Levels), 
+                            show.legend = FALSE,
+                            side = "l", 
+                            range_scale = 0.3, 
+                            width = 1,
+                            alpha = 1,
+                            size = 0.5) + 
+    scale_color_manual(values = 
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    stat_summary(
+      geom = "text",
+      fun = "mean",
+      aes(label = round(..y.., 1), color = GL_Levels),
+      fontface = "bold",
+      size = 6,
+      vjust = - 2.5,
+      hjust = 1.6) +
+    coord_flip() +
+    ggtitle("Distribution of Graph Literacy Levels") +
+    theme_minimal() + 
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          axis.text.y = element_text(size = 15),
+          legend.position = "none") + 
+    scale_x_discrete(labels = c("Reading\nthe Data",
+                                "Reading\nbetween\nthe Data",
+                                "Reading\nbeyond\nthe Data"
+                                )) +
+    xlab("") +
+    ylab("Percentage per teacher") 
+```
+
+## 5.2 Zero-one inflated Beta regression analysis for association between `Test_Score` and proportions of Graph Literacy Levels
+
+### 5.2.1 Fit Zero-one inflated Beta regression model with `Test_Score` as a predictor with interaction
+
+```{r}
+fit_prediction_Score_RelativeDuration02 <- 
+  brm(bf(GL_Values02 ~ GL_Levels * Test_Score + (1|PID), 
+         phi ~ GL_Levels,
+         zoi ~ GL_Levels * Test_Score),
+      data = GL_long_RelativeDuration,
+      family = zero_one_inflated_beta(), 
+      save_pars = save_pars(all = TRUE),
+      seed = 24367564)
+
+summary(fit_prediction_Score_RelativeDuration02)
+
+plot(fit_prediction_Score_RelativeDuration02)
+
+pp_check(fit_prediction_Score_RelativeDuration02)
+```
+
+
+```{r}
+conditional_effects(fit_prediction_Score_RelativeDuration02, "Test_Score:GL_Levels")[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 3))
+```
+
+
+### 5.2.2 Estimate and visualize the association between the `Test_Score` and the Graph Literacy Levels
+
+```{r}
+Graph_Literacy_interaction_estimation01 <- 
+  conditional_effects(
+    fit_prediction_Score_RelativeDuration02,
+    "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+Graph_Literacy_interaction_estimation01 |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = GL_Levels, 
+           fill = GL_Levels)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                       c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                     labels = c("Lvl_01_duration" = "Reading the data",
+                                "Lvl_02_duration" = "Reading between \nthe data", 
+                                "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  scale_fill_manual(values = 
+                      c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                    labels = c("Lvl_01_duration" = "Reading the data",
+                               "Lvl_02_duration" = "Reading between \nthe data", 
+                               "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  labs(
+    x = "Graph Literacy (Test score)",
+    y = "Relative duration of the graph literacy levels (scaled)",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
+### 5.2.3 Display the values of the line graph
+
+```{r}
+quantification_of_RQ3 <- Graph_Literacy_interaction_estimation01 |> 
+  group_by(GL_Levels) |> 
+  summarise(
+    Start_Score = min(Test_Score),
+    Start_Value = estimate__[which.min(Test_Score)],   
+    Start_Lower = lower__[which.min(Test_Score)],     
+    Start_Upper = upper__[which.min(Test_Score)],    
+    End_Score = max(Test_Score),
+    End_Value = estimate__[which.max(Test_Score)],    
+    End_Lower = lower__[which.max(Test_Score)],      
+    End_Upper = upper__[which.max(Test_Score)],       
+    Max_Score = Test_Score[which.max(estimate__)],    
+    Max_Value = max(estimate__),                     
+    Max_Lower = lower__[which.max(estimate__)],      
+    Max_Upper = upper__[which.max(estimate__)]        
+  )
+
+print(quantification_of_RQ3, width = Inf)
+```

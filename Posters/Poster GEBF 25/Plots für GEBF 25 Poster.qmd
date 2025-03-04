@@ -1,0 +1,349 @@
+---
+title: "Plots für GEBF 25 Poster"
+format: 
+    html:
+        toc: true
+        toc-title: Contents
+        toc-location: left
+lang: "eng"
+editor_options: 
+  chunk_output_type: console
+---
+
+# Forschungsfrage 1 
+> Wie häufig adressieren Lehrkräfte unterschiedlich komplexe statistische Entitäten durchschnittlich?
+
+## Conditional Effects 
+
+Bedingte Effekte visualisiert mit `Forrest Plot`. 
+```{r}
+Average_SE_estimation <- conditional_effects(fit_intercept01)[[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+```
+
+## Mit Beschriftung 
+```{r}
+Average_SE_estimation |> 
+ggplot(aes(x = estimate__, y = factor(code, 
+             level=c("DI_US",
+                     "DI_RA",
+                     "MD",
+                     "BM", 
+                     "SK", 
+                     "OL",
+                     "DI_DM")),
+  color = code)) + 
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lower__, xmax = upper__), linewidth = 1, width = 0.0) + 
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a6e00",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#a4b046",
+                           "DI_US" = "#FFA500")) +
+  ggtitle("") + 
+  scale_y_discrete(labels = c("OL" = "Ausreißer",
+                              "BM" = "Bimodalität", 
+                              "MD" = "Mittelwerts- \ndifferenz", 
+                              "SK" = "Schiefe",
+                              "DI_US" = "Streuung: \nUnspezifiziert", 
+                              "DI_DM" = "Streuung: Abstand \nzum Mittelwert", 
+                              "DI_RA" = "Streuung: \nWertebereich")) +
+ 
+  scale_x_continuous(breaks = seq(0, 4.1, by = 0.5)) +
+  geom_text(aes(label = round(estimate__, 1)), 
+            vjust = -1.5, 
+            size = 4, 
+            fontface = "bold") +
+  xlab("") + 
+  ylab("") +
+  theme_minimal()+
+   theme(
+    axis.title.x = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 15, face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16)) +  
+  theme(legend.position = "none") +
+  theme(panel.background = element_rect(fill = "grey98", color = NA))
+```
+
+## Ohne Beschriftung 
+```{r}
+Average_SE_estimation |> 
+ggplot(aes(x = estimate__, y = factor(code, 
+             level=c("DI_US",
+                     "DI_RA",
+                     "MD",
+                     "BM", 
+                     "SK", 
+                     "OL",
+                     "DI_DM")),
+  color = code)) + 
+  geom_point(size = 3) + 
+  geom_errorbar(aes(xmin = lower__, xmax = upper__), linewidth = 1, width = 0.0) + 
+  scale_color_manual(values = 
+                         c("DI_DM" = "#8a6e00",
+                           "OL" ="#462268",
+                           "SK"= "#6dc95d", 
+                           "BM" = "#29788d",
+                           "MD" = "#22a784",
+                           "DI_RA" = "#a4b046",
+                           "DI_US" = "#FFA500")) +
+  ggtitle("") + 
+  scale_y_discrete(labels = c("OL" = "",
+                              "BM" = "", 
+                              "MD" = "", 
+                              "SK" = "",
+                              "DI_US" = "", 
+                              "DI_DM" = "", 
+                              "DI_RA" = "")) +
+ 
+  scale_x_continuous(breaks = seq(0, 4.1, by = 0.5)) +
+  geom_text(aes(label = round(estimate__, 1)), 
+            vjust = -1.5, 
+            size = 4, 
+            fontface = "bold") +
+  xlab("") + 
+  ylab("") +
+  theme_minimal()+
+   theme(
+    axis.title.x = element_text(size = 15, face = "bold"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 15, face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16)) +  
+  theme(legend.position = "none") +
+  theme(panel.background = element_rect(fill = "grey98", color = NA))
+```
+
+
+# Forschungsfrage 2 
+> Inwieweit prädiziert deren allgemeine Graph Literacy (gemessen durch einen Test) diese Häufigkeiten?
+
+```{r}
+# Kein Plot aber dafür Incidence Rate Ratio für 
+```
+
+
+
+# Forschungsfrage 3
+> Inwieweit prädiziert deren allgemeine Graph Literacy (gemessen durch einen Test) deren Graph Reading Performance (gemessen durch das Graph Literacy Level)  während der Rezeption artifizieller Halbjahresnoten?
+
+## Box-Plot der prozentualen Anteile je Lehrkraft 
+```{r}
+GL_long_RelativeDuration |>  
+  ggplot(aes(x=factor(GL_Levels, 
+             level=c("Lvl_01_duration", 
+                     "Lvl_02_duration", 
+                     "Lvl_03_duration")),
+             y=GL_Values,
+             fill = GL_Levels)) +
+    geom_boxplot(aes(fill = GL_Levels), 
+                 show.legend = FALSE,
+                 alpha = 0.2, # lower opacity 
+                 outlier.shape = NA,
+                 width = 0.18) +
+    scale_fill_manual(values = # For individual coloring
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    geom_half_point(aes(color = GL_Levels), 
+                            show.legend = FALSE,
+                            side = "l", 
+                            range_scale = 0.3, 
+                            width = 1,
+                            alpha = 1,
+                            size = 0.5) + 
+    scale_color_manual(values = 
+                        c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    stat_summary(
+      geom = "text",
+      fun = "mean",
+      aes(label = round(..y.., 1), color = GL_Levels),
+      fontface = "bold",
+      size = 5,
+      vjust = -2,
+      hjust = 2) +
+    coord_flip() +
+    ggtitle("Reading ...") +
+    theme_minimal() + 
+    theme(plot.title = element_text( size = 15, hjust = - 0.1, vjust = - 9, face = "bold"),
+          axis.text.y = element_text(size = 15, face = "bold"),
+          legend.position = "none") + 
+    theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+    scale_x_discrete(labels = c("... the Data",
+                                "... between\nthe Data",
+                                "... beyond\nthe Data")) +
+    xlab("") +
+    ylab("Prozentualer Anteil je Lehrkraft") 
+```
+
+Zweiter Versuch aber ohne Beschriftung der y-Achse 
+
+```{r}
+GL_long_RelativeDuration |>  
+  ggplot(aes(x=factor(GL_Levels, 
+             level=c("Lvl_01_duration", 
+                     "Lvl_02_duration", 
+                     "Lvl_03_duration")),
+             y=GL_Values,
+             fill = GL_Levels)) +
+    geom_boxplot(aes(fill = GL_Levels), 
+                 show.legend = FALSE,
+                 alpha = 0.2, # lower opacity 
+                 outlier.shape = NA,
+                 width = 0.18) +
+    scale_fill_manual(values = # For individual coloring
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"))+
+    geom_half_point(aes(color = GL_Levels), 
+                            show.legend = FALSE,
+                            side = "l", 
+                            range_scale = 0.3, 
+                            width = 1,
+                            alpha = 1,
+                            size = 0.5) + 
+    scale_color_manual(values = 
+                         c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70")) +
+    stat_summary(
+      geom = "text",
+      fun = "mean",
+      aes(label = round(..y.., 1), color = GL_Levels),
+      fontface = "bold",
+      size = 5,
+      vjust = -2,
+      hjust = 1.0) +
+    coord_flip() +
+    ggtitle("") +
+    theme_minimal() + 
+    theme(plot.title = element_text( size = 15, hjust = - 0.1, vjust = - 9, face = "bold"),
+          axis.title.x = element_text(size = 13),
+          legend.position = "none") + 
+    theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+    scale_x_discrete(labels = c("",
+                                "",
+                                "")) +
+    xlab("") +
+    ylab("Prozentualer Anteil je Lehrkraft") 
+```
+
+## Bedingte Effekte für Graph Literacy und Graph Literacy Performanz 
+```{r}
+Proportions_GL_Estimation <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels") [[1]] |>  
+  mutate_if(is.numeric, function(x) round(x, digits = 1))
+```
+
+
+
+Zweiter Versuch
+```{r}
+############# Erster Ansatz, extrahieren d. Datan aus Plot #######
+# 1. Speichern als Objekt 
+Proportions_GL_Estimation <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels")
+
+# 2. Extrahieren der Daten
+Proportions_GL_Estimation <- Proportions_GL_Estimation$`Test_Score:GL_Levels`
+
+# 3. Plotten der Daten
+Proportions_GL_Estimation |> 
+ggplot(aes(x = Test_Score, y = estimate__, color = GL_Levels, fill = GL_Levels)) +
+  geom_line(size = 1.2) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.2, color = NA) +
+  scale_fill_manual(values = # For individual coloring
+                         c("Lvl_01_duration" = "#f06860",
+                           "Lvl_02_duration" = "#56d869", 
+                           "Lvl_03_duration" = "#6094f3")) +
+  labs(
+    x = "Test Score",
+    y = "GL_Values01",
+    color = "GL Levels",
+    fill = "GL Levels"
+  ) +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    text = element_text(size = 14)
+  )
+
+
+############# Erneuter Ansatz, dieses Mal mit nur zwei Schritten #######
+# 1. Extrahiere die Daten aus dem Plot und speichere diese als Objekt 
+plot_data <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+# 2. PLotte die Daten 
+plot_data |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = GL_Levels, 
+           fill = GL_Levels)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.4, color = NA) +
+  scale_fill_manual(values = 
+                     c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                     labels = c("Lvl_01_duration" = "Reading the data",
+                               "Lvl_02_duration" = "Reading between the data", 
+                               "Lvl_03_duration" = "Reading beyond the data")) +
+  labs(
+    x = "Graph Literacy (Testergebnis)",
+    y = "Proportionale Dauer der Graph Literacy Level",
+    color = "",
+    fill = "") +
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "right",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
+Dritter und finaler Versuch 
+
+```{r}
+plot_data <- conditional_effects(fit_prediction_Score_RelativeDuration01, "Test_Score:GL_Levels")$`Test_Score:GL_Levels`
+
+plot_data |> 
+ggplot(aes(x = Test_Score, 
+           y = estimate__, 
+           color = GL_Levels, 
+           fill = GL_Levels)) +
+  geom_line(size = 1.5) +
+  geom_ribbon(aes(ymin = lower__, ymax = upper__), 
+              alpha = 0.4, color = NA) +
+  scale_color_manual(values = 
+                       c("Lvl_01_duration" = "#30688e",
+                         "Lvl_02_duration" = "#20a486", 
+                         "Lvl_03_duration" = "#481f70"),
+                     labels = c("Lvl_01_duration" = "Reading the data",
+                                "Lvl_02_duration" = "Reading between \nthe data", 
+                                "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  scale_fill_manual(values = 
+                      c("Lvl_01_duration" = "#30688e",
+                           "Lvl_02_duration" = "#20a486", 
+                           "Lvl_03_duration" = "#481f70"),
+                    labels = c("Lvl_01_duration" = "Reading the data",
+                               "Lvl_02_duration" = "Reading between \nthe data", 
+                               "Lvl_03_duration" = "Reading beyond \nthe data")) +
+  labs(
+    x = "Graph Literacy (Testergebnis)",
+    y = "Proportionale Dauer der Graph Literacy Level",
+    color = "", 
+    fill = "") +  
+  theme_minimal() +
+  theme(panel.background = element_rect(fill = "grey98", color = NA)) +
+  theme(
+    legend.position = "",
+    axis.title.x = element_text(size = 13), 
+    axis.title.y = element_text(size = 13),  
+    text = element_text(size = 14))
+```
+
